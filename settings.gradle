@@ -1,2 +1,4 @@
 rootProject.name = 'SudokuSolver'
 
+include("satsolver-library", "sudokusolver")
+
