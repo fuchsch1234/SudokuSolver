@@ -1,5 +1,6 @@
 package de.fuchsch.satsolver
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class KnfUnitTest {
@@ -11,7 +12,8 @@ class KnfUnitTest {
         knf += variable
         val trueBinding = Binding(mutableMapOf(variable to true))
         val falseBinding = Binding(mutableMapOf(variable to false))
-        assert(knf.evaluate(trueBinding))
-        assert(knf.evaluate(falseBinding))
+        assertEquals(EvaluationResult.TRUE, knf.evaluate(trueBinding))
+        assertEquals(EvaluationResult.UNDEFINED, knf.evaluate(Binding()))
+        assertEquals(EvaluationResult.FALSE, knf.evaluate(falseBinding))
     }
 }
