@@ -6,7 +6,7 @@ enum class EvaluationResult {
     UNDEFINED
 }
 
-class Knf {
+class Knf (val variables: MutableList<Variable> = mutableListOf()) {
 
     val terms = mutableListOf<Term>()
 

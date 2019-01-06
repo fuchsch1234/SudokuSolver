@@ -8,7 +8,7 @@ class KnfUnitTest {
     @Test
     fun `A single term evaluates to its value`() {
         val variable = Variable.create()
-        val knf = Knf()
+        val knf = Knf(mutableListOf(variable))
         knf += variable
         val trueBinding = Binding(mutableMapOf(variable to true))
         val falseBinding = Binding(mutableMapOf(variable to false))
@@ -20,7 +20,7 @@ class KnfUnitTest {
     @Test
     fun `Evaluating multiple terms works`() {
         val variables = Array(5) { Variable.create() }
-        val knf = Knf()
+        val knf = Knf(variables.toMutableList())
         knf += variables[0] - variables[1]
         knf += variables[2] + variables[3] + variables[4]
         val binding = Binding(
