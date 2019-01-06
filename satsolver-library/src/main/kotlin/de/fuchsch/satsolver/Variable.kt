@@ -1,8 +1,8 @@
 package de.fuchsch.satsolver
 
-import java.util.*
+import java.util.concurrent.atomic.AtomicLong
 
-class Variable private constructor (private val id: UUID) {
+class Variable private constructor (private val id: Long) {
 
     operator fun plus(v: Variable): Knf.Term {
         val term = Knf.Term()
@@ -32,7 +32,9 @@ class Variable private constructor (private val id: UUID) {
 
     companion object {
 
-        fun create(): Variable = Variable(UUID.randomUUID())
+        private val id = AtomicLong(1)
+
+        fun create(): Variable = Variable(id.getAndIncrement())
 
     }
 
