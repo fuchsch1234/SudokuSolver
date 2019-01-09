@@ -23,4 +23,17 @@ class SolverUnitTest {
         val solution = solve(SolverState(knf, Binding()))
         assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
     }
+
+    @Test
+    fun `Solving a equation that enforces backtracking`() {
+        val variables = Array(5) { Variable.create() }
+        val knf = Knf(variables.toMutableList())
+        knf += variables[0] - variables[1]
+        knf += variables[2]
+        knf += variables[0] - variables[3]
+        knf += variables[0] - variables[4]
+        knf += variables[3] + variables[4]
+        val solution = solve(SolverState(knf, Binding()))
+        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+    }
 }

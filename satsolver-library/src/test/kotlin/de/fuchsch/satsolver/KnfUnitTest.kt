@@ -33,4 +33,32 @@ class KnfUnitTest {
             ))
         assertEquals(EvaluationResult.TRUE, knf.evaluate(binding))
     }
+
+    @Test
+    fun `Evaluating with variables in multiple terms works`() {
+        val variables = Array(5) { Variable.create() }
+        val knf = Knf(variables.toMutableList())
+        knf += variables[0] - variables[1]
+        knf += variables[2]
+        knf += variables[0] - variables[3]
+        knf += variables[0] - variables[4]
+        knf += variables[3] + variables[4]
+        val trueBinding = Binding(
+            mutableMapOf(
+                variables[0] to true,
+                variables[1] to false,
+                variables[2] to true,
+                variables[3] to false,
+                variables[4] to true
+            ))
+        val falseBinding = Binding(
+            mutableMapOf(
+                variables[0] to false,
+                variables[1] to false,
+                variables[2] to false,
+                variables[3] to false
+            ))
+        assertEquals(EvaluationResult.TRUE, knf.evaluate(trueBinding))
+        assertEquals(EvaluationResult.FALSE, knf.evaluate(falseBinding))
+    }
 }
