@@ -36,6 +36,15 @@ internal class Assignment(private val variable: Variable): Action() {
 
 }
 
+internal class Inference(private val variable: Variable, private val value: Boolean): Action() {
+
+    override fun tryNext(binding: Binding): Boolean {
+        binding.boundVariable.remove(variable)
+        return false
+    }
+    
+}
+
 class Unsatisfiable(what: String): Error(what)
 
 internal fun backtrack(backtrackStack: Stack<Action>, binding: Binding) {
