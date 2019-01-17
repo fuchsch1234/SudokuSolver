@@ -20,23 +20,38 @@ class Solver(private val initialState: SolverState) {
     private val backtrackStack = Stack<Action>()
     private val binding = initialState.binding.copy()
 
+    private val unboundVariablesInTerms = mutableMapOf<Knf.Term, Int>()
+    private val variablesToTerms: MutableMap<Variable, MutableList<Knf.Term>> = mutableMapOf()
+
+    init {
+        for (term in initialState.knf.terms) {
+            unboundVariablesInTerms[term] = term.positiveVariables.count { !binding.boundVariable.containsKey(it) } +
+                term.negativeVariables.count { !binding.boundVariable.containsKey(it) }
+            term.positiveVariables.map { variablesToTerms.putIfAbsent(it, mutableListOf(term))?.add(term) }
+            term.negativeVariables.map { variablesToTerms.putIfAbsent(it, mutableListOf(term))?.add(term) }
+        }
+    }
+
+    private fun undoAssignment(variable: Variable) {
+        binding.boundVariable.remove(variable)
+        variablesToTerms[variable]?.map {
+            unboundVariablesInTerms[it] = (unboundVariablesInTerms[it] ?: 0) + 1
+        }
+        backtrackStack.pop()
+    }
+
     private fun backtrack() {
         var action = backtrackStack.peek()
         loop@ while (action != null) {
             when (action) {
-                is Assignment -> {
+                is Assignment ->
                     if (binding.boundVariable[action.variable] == false) {
                         binding.boundVariable[action.variable] = true
                         break@loop
                     } else {
-                        binding.boundVariable.remove(action.variable)
-                        backtrackStack.pop()
+                        undoAssignment(action.variable)
                     }
-                }
-                is Inference -> {
-                    binding.boundVariable.remove(action.variable)
-                    backtrackStack.pop()
-                }
+                is Inference -> undoAssignment(action.variable)
             }
             if (backtrackStack.isEmpty()) throw Unsatisfiable("Equation cannot be satisfied")
             action = backtrackStack.peek()
@@ -52,6 +67,9 @@ class Solver(private val initialState: SolverState) {
                 else -> {
                     val variable = knf.variables.first {  !binding.boundVariable.containsKey(it)  }
                     binding.boundVariable[variable] = false
+                    variablesToTerms[variable]?.map {
+                        unboundVariablesInTerms[it] = (unboundVariablesInTerms[it] ?: 1) - 1
+                    }
                     backtrackStack.push(Assignment(variable))
                 }
             }
