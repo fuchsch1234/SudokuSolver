@@ -25,8 +25,8 @@ class Solver(private val initialState: SolverState) {
 
     init {
         for (term in initialState.knf.terms) {
-            unboundVariablesInTerms[term] = term.positiveVariables.count { !binding.boundVariable.containsKey(it) } +
-                term.negativeVariables.count { !binding.boundVariable.containsKey(it) }
+            unboundVariablesInTerms[term] = term.positiveVariables.count { !binding.binds(it) } +
+                term.negativeVariables.count { !binding.binds(it) }
             term.positiveVariables.map { variablesToTerms.putIfAbsent(it, mutableListOf(term))?.add(term) }
             term.negativeVariables.map { variablesToTerms.putIfAbsent(it, mutableListOf(term))?.add(term) }
         }
