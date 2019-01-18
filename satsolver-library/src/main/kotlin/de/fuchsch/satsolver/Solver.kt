@@ -37,7 +37,6 @@ class Solver(private val initialState: SolverState) {
         variablesToTerms[variable]?.map {
             unboundVariablesInTerms[it] = (unboundVariablesInTerms[it] ?: 0) + 1
         }
-        backtrackStack.pop()
     }
 
     private fun assignVariable(variable: Variable, value: Boolean) {
@@ -60,8 +59,29 @@ class Solver(private val initialState: SolverState) {
                     }
                 is Inference -> undoAssignment(action.variable)
             }
+            backtrackStack.pop()
             if (backtrackStack.isEmpty()) throw Unsatisfiable("Equation cannot be satisfied")
             action = backtrackStack.peek()
+        }
+    }
+
+    private fun inferVariablesFrom(variable: Variable) {
+        variablesToTerms[variable]?.map {
+            when (it.evaluate(binding)) {
+                EvaluationResult.UNDEFINED -> if (unboundVariablesInTerms[it] == 1) {
+                    val unbound = it.positiveVariables.find { !binding.binds(it) } ?:
+                        it.negativeVariables.find { !binding.binds(it) }
+                    if (unbound != null) {
+                        if (it.positiveVariables.contains(unbound)) {
+                            assignVariable(unbound, true)
+                        } else {
+                            assignVariable(unbound, false)
+                        }
+                        backtrackStack.push(Inference(unbound))
+                    }
+                }
+                else -> { }
+            }
         }
     }
 
@@ -75,6 +95,7 @@ class Solver(private val initialState: SolverState) {
                     val variable = knf.variables.first {  !binding.boundVariable.containsKey(it)  }
                     assignVariable(variable, false)
                     backtrackStack.push(Assignment(variable))
+                    inferVariablesFrom(variable)
                 }
             }
         }
