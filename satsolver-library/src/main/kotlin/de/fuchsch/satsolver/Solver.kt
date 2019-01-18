@@ -40,6 +40,13 @@ class Solver(private val initialState: SolverState) {
         backtrackStack.pop()
     }
 
+    private fun assignVariable(variable: Variable, value: Boolean) {
+        binding.boundVariable[variable] = value
+        variablesToTerms[variable]?.map {
+            unboundVariablesInTerms[it] = (unboundVariablesInTerms[it] ?: 1) - 1
+        }
+    }
+
     private fun backtrack() {
         var action = backtrackStack.peek()
         loop@ while (action != null) {
@@ -66,10 +73,7 @@ class Solver(private val initialState: SolverState) {
                 EvaluationResult.FALSE -> backtrack()
                 else -> {
                     val variable = knf.variables.first {  !binding.boundVariable.containsKey(it)  }
-                    binding.boundVariable[variable] = false
-                    variablesToTerms[variable]?.map {
-                        unboundVariablesInTerms[it] = (unboundVariablesInTerms[it] ?: 1) - 1
-                    }
+                    assignVariable(variable, false)
                     backtrackStack.push(Assignment(variable))
                 }
             }
