@@ -2,65 +2,105 @@ package de.fuchsch.satsolver
 
 import java.util.*
 
+internal sealed class Action
+
+internal data class Assignment(val variable: Variable): Action()
+
+internal data class Inference(val variable: Variable): Action()
+
+class Unsatisfiable(what: String): Error(what)
+
 data class SolverState(
     val knf: Knf,
     val binding: Binding
 )
 
-internal sealed class Action {
+class Solver(private val initialState: SolverState) {
 
-    abstract fun tryNext(binding: Binding): Boolean
+    private val backtrackStack = Stack<Action>()
+    private val binding = initialState.binding.copy()
 
-}
+    private val unboundVariablesInTerms = mutableMapOf<Knf.Term, Int>()
+    private val variablesToTerms: MutableMap<Variable, MutableList<Knf.Term>> = mutableMapOf()
 
-internal class Assignment(private val variable: Variable): Action() {
-
-    val iter = options.iterator()
-
-    override fun tryNext(binding: Binding): Boolean = when(iter.hasNext()) {
-        false -> {
-            binding.boundVariable.remove(variable)
-            false
-        }
-        true -> {
-            binding.boundVariable[variable] = iter.next()
-            true
+    init {
+        for (term in initialState.knf.terms) {
+            unboundVariablesInTerms[term] = term.positiveVariables.count { !binding.binds(it) } +
+                term.negativeVariables.count { !binding.binds(it) }
+            term.positiveVariables.map { variablesToTerms.putIfAbsent(it, mutableListOf(term))?.add(term) }
+            term.negativeVariables.map { variablesToTerms.putIfAbsent(it, mutableListOf(term))?.add(term) }
         }
     }
 
-    companion object {
-
-        internal val options = listOf(false, true)
-
+    private fun undoAssignment(variable: Variable) {
+        binding.boundVariable.remove(variable)
+        variablesToTerms[variable]?.map {
+            unboundVariablesInTerms[it] = (unboundVariablesInTerms[it] ?: 0) + 1
+        }
     }
 
-}
-
-class Unsatisfiable(what: String): Error(what)
-
-internal fun backtrack(backtrackStack: Stack<Action>, binding: Binding) {
-    var action = backtrackStack.peek()
-    while (!action.tryNext(binding)) {
-        backtrackStack.pop()
-        if (backtrackStack.isEmpty()) throw Unsatisfiable("Equation cannot be satisfied")
-        action = backtrackStack.peek()
+    private fun assignVariable(variable: Variable, value: Boolean) {
+        binding.boundVariable[variable] = value
+        variablesToTerms[variable]?.map {
+            unboundVariablesInTerms[it] = (unboundVariablesInTerms[it] ?: 1) - 1
+        }
     }
-}
 
-fun solve(initialState: SolverState): Binding {
-    val knf = initialState.knf
-    val binding = initialState.binding.copy()
-    val backtrackStack = Stack<Action>()
-    while (true) {
-        when (knf.evaluate(binding)) {
-            EvaluationResult.TRUE -> return binding
-            EvaluationResult.FALSE -> backtrack(backtrackStack, binding)
-            else -> {
-                val variable = knf.variables.first {  !binding.boundVariable.containsKey(it)  }
-                val assignment = Assignment(variable)
-                assignment.tryNext(binding)
-                backtrackStack.push(assignment)
+    private fun backtrack() {
+        var action = backtrackStack.peek()
+        loop@ while (action != null) {
+            when (action) {
+                is Assignment ->
+                    if (binding.boundVariable[action.variable] == false) {
+                        binding.boundVariable[action.variable] = true
+                        break@loop
+                    } else {
+                        undoAssignment(action.variable)
+                    }
+                is Inference -> undoAssignment(action.variable)
+            }
+            backtrackStack.pop()
+            if (backtrackStack.isEmpty()) throw Unsatisfiable("Equation cannot be satisfied")
+            action = backtrackStack.peek()
+        }
+    }
+
+    private fun inferVariablesFrom(variable: Variable) {
+        variablesToTerms[variable]?.map {
+            when (it.evaluate(binding)) {
+                EvaluationResult.UNDEFINED -> if (unboundVariablesInTerms[it] == 1) {
+                    val unbound = it.positiveVariables.find { !binding.binds(it) } ?:
+                        it.negativeVariables.find { !binding.binds(it) }
+                    if (unbound != null) {
+                        if (it.positiveVariables.contains(unbound)) {
+                            assignVariable(unbound, true)
+                        } else {
+                            assignVariable(unbound, false)
+                        }
+                        backtrackStack.push(Inference(unbound))
+                    }
+                }
+                else -> { }
             }
         }
     }
+
+    internal fun solve(): Binding {
+        val knf = initialState.knf
+        while (true) {
+            when (knf.evaluate(binding)) {
+                EvaluationResult.TRUE -> return binding
+                EvaluationResult.FALSE -> backtrack()
+                else -> {
+                    val variable = knf.variables.first {  !binding.boundVariable.containsKey(it)  }
+                    assignVariable(variable, false)
+                    backtrackStack.push(Assignment(variable))
+                    inferVariablesFrom(variable)
+                }
+            }
+        }
+    }
+
 }
+
+fun solve(initialState: SolverState): Binding = Solver(initialState).solve()

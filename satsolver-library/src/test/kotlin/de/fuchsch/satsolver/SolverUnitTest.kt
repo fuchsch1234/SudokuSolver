@@ -36,4 +36,17 @@ class SolverUnitTest {
         val solution = solve(SolverState(knf, Binding()))
         assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
     }
+
+    @Test
+    fun `Solving a 20 variable equation`() {
+        val variables = Array(20) { Variable.create() }
+        val knf = Knf(variables.toMutableList())
+        for (i in 0..18) {
+            knf += variables[i] - variables[18]
+            knf += variables[i] - variables[19]
+        }
+        knf += variables[18] + variables[19]
+        val solution = solve(SolverState(knf, Binding()))
+        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+    }
 }
