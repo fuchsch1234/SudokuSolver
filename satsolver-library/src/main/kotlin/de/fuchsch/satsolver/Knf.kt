@@ -1,11 +1,20 @@
 package de.fuchsch.satsolver
 
+/**
+ * Possible results for evaluating a term or formula.
+ */
 enum class EvaluationResult {
     FALSE,
     TRUE,
     UNDEFINED
 }
 
+/**
+ * Model of a boolean formula in conjunctive normal form, that is a conjunction of disjunction terms.
+ *
+ * @property variables List of variables used in the formulas disjunction terms.
+ * @property terms List of disjunction terms that build the formula.
+ */
 class Knf (val variables: MutableList<Variable> = mutableListOf()) {
 
     val terms = mutableListOf<Term>()
@@ -41,6 +50,9 @@ class Knf (val variables: MutableList<Variable> = mutableListOf()) {
         return newKnf
     }
 
+    /**
+     * Model for a single disjunction term used to build [CNF] formulas.
+     */
     data class Term (
         val positiveVariables: MutableList<Variable> = mutableListOf(),
         val negativeVariables: MutableList<Variable> = mutableListOf()
