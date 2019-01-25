@@ -15,7 +15,7 @@ enum class EvaluationResult {
  * @property variables List of variables used in the formulas disjunction terms.
  * @property terms List of disjunction terms that build the formula.
  */
-class Knf (val variables: MutableList<Variable> = mutableListOf()) {
+class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
 
     val terms = mutableListOf<Term>()
 
@@ -36,15 +36,15 @@ class Knf (val variables: MutableList<Variable> = mutableListOf()) {
         terms.add(Term() + variable)
     }
 
-    operator fun plus(term: Term): Knf {
-        val newKnf = Knf()
+    operator fun plus(term: Term): Cnf {
+        val newKnf = Cnf()
         newKnf.terms.addAll(terms)
         newKnf.terms.add(term)
         return newKnf
     }
 
-    operator fun plus(variable: Variable): Knf {
-        val newKnf = Knf()
+    operator fun plus(variable: Variable): Cnf {
+        val newKnf = Cnf()
         newKnf.terms.addAll(terms)
         newKnf += variable
         return newKnf

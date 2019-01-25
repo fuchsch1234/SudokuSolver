@@ -3,7 +3,7 @@ package de.fuchsch.satsolver
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Represents a variable for use in [Knf] boolean formulas.
+ * Represents a variable for use in [Cnf] boolean formulas.
  * A variable can be bound to either true or false by means of a [Binding] or it can be unassigned,
  * in which case its value is undefined.
  *
@@ -18,8 +18,8 @@ class Variable private constructor (private val id: Long) {
      * @param v The second variable for the disjunction.
      * @return A term modelling the disjunction.
      */
-    operator fun plus(v: Variable): Knf.Term {
-        val term = Knf.Term()
+    operator fun plus(v: Variable): Cnf.Term {
+        val term = Cnf.Term()
         term.positiveVariables.add(this)
         term.positiveVariables.add(v)
         return term
@@ -32,8 +32,8 @@ class Variable private constructor (private val id: Long) {
      * @param v The second variable for the disjunction.
      * @return A term modelling the disjunction.
      */
-    operator fun minus(v: Variable): Knf.Term {
-        val term = Knf.Term()
+    operator fun minus(v: Variable): Cnf.Term {
+        val term = Cnf.Term()
         term.positiveVariables.add(this)
         term.negativeVariables.add(v)
         return term
@@ -44,8 +44,8 @@ class Variable private constructor (private val id: Long) {
      *
      * @return A single variable term, where the variable is negated.
      */
-    operator fun unaryMinus(): Knf.Term {
-        val term = Knf.Term()
+    operator fun unaryMinus(): Cnf.Term {
+        val term = Cnf.Term()
         term.negativeVariables.add(this)
         return term
     }
@@ -55,8 +55,8 @@ class Variable private constructor (private val id: Long) {
      *
      * @return A single variable term.
      */
-    operator fun unaryPlus(): Knf.Term {
-        val term = Knf.Term()
+    operator fun unaryPlus(): Cnf.Term {
+        val term = Cnf.Term()
         term.positiveVariables.add(this)
         return term
     }

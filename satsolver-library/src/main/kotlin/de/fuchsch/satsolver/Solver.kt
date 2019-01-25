@@ -11,7 +11,7 @@ internal data class Inference(val variable: Variable): Action()
 class Unsatisfiable(what: String): Error(what)
 
 data class SolverState(
-    val knf: Knf,
+    val cnf: Cnf,
     val binding: Binding
 )
 
@@ -20,11 +20,11 @@ class Solver(private val initialState: SolverState) {
     private val backtrackStack = Stack<Action>()
     private val binding = initialState.binding.copy()
 
-    private val unboundVariablesInTerms = mutableMapOf<Knf.Term, Int>()
-    private val variablesToTerms: MutableMap<Variable, MutableList<Knf.Term>> = mutableMapOf()
+    private val unboundVariablesInTerms = mutableMapOf<Cnf.Term, Int>()
+    private val variablesToTerms: MutableMap<Variable, MutableList<Cnf.Term>> = mutableMapOf()
 
     init {
-        for (term in initialState.knf.terms) {
+        for (term in initialState.cnf.terms) {
             unboundVariablesInTerms[term] = term.positiveVariables.count { !binding.binds(it) } +
                 term.negativeVariables.count { !binding.binds(it) }
             term.positiveVariables.map { variablesToTerms.putIfAbsent(it, mutableListOf(term))?.add(term) }
@@ -86,7 +86,7 @@ class Solver(private val initialState: SolverState) {
     }
 
     internal fun solve(): Binding {
-        val knf = initialState.knf
+        val knf = initialState.cnf
         while (true) {
             when (knf.evaluate(binding)) {
                 EvaluationResult.TRUE -> return binding
