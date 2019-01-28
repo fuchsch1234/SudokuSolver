@@ -2,14 +2,45 @@ package de.fuchsch.satsolver
 
 import java.util.*
 
+/**
+ * Model for the different actions the [Solver] takes in order to find a satisfying [Binding].
+ *
+ * Internally the solver uses backtracking to search for a satisfying [Binding]. To try different
+ * paths the algorithm must be able to revert previous actions and try different ones. The subclasses
+ * of this class are used to keep track which actions the algorithm already tried.
+ */
 internal sealed class Action
 
+/**
+ * Model for assignment of a variable to a boolean value.
+ *
+ * @property variable The variable that is assigned in a step of the algorithm.
+ */
 internal data class Assignment(val variable: Variable): Action()
 
+/**
+ * Model for assignment of a value to a variable, because the value could be inferred from a term
+ * and a specific binding, i.e. because a term evaluates to [EvaluationResult.UNDEFINED] and
+ * contains only one unassigned variable.
+ *
+ * @property variable The variable that is assigned in a step of the algorithm.
+ */
 internal data class Inference(val variable: Variable): Action()
 
+/**
+ * Exception that is thrown if there exists no binding, satisfying the given
+ * boundary conditions, that evaluates a [Cnf] to true.
+ *
+ * @property what Message describing the exception.
+ */
 class Unsatisfiable(what: String): Error(what)
 
+/**
+ * Keeps track of the [Solver]s internal state.
+ *
+ * @property cnf The [Cnf] the solver tries to satisfy.
+ * @property binding The [Binding] currently used to evaluate cnf.
+ */
 data class SolverState(
     val cnf: Cnf,
     val binding: Binding
@@ -103,4 +134,12 @@ class Solver(private val initialState: SolverState) {
 
 }
 
+/**
+ * Searches for a [Binding] that satisfies a [Cnf], i.e. evaluates it to [EvaluationResult.TRUE]
+ *
+ * @param initialState The initial state to use. Contains the boundary conditions
+ * in the form of preset variable assignments.
+ * @return A [Binding] that satisfies the given cnf with the preset variables assignments.
+ * @throws Unsatisfiable If there is no [Binding] satisfying the cnf.
+ */
 fun solve(initialState: SolverState): Binding = Solver(initialState).solve()
