@@ -4,9 +4,18 @@ package de.fuchsch.satsolver
  * Possible results for evaluating a term or formula.
  */
 enum class EvaluationResult {
-    FALSE,
+    /**
+     * The boolean value of a [Cnf] or [Cnf.Term] is true for a given binding.
+     */
     TRUE,
-    UNDEFINED
+    /**
+     * The boolean value of a [Cnf] or [Cnf.Term] is not completely defined for a given binding.
+     */
+    UNDEFINED,
+    /**
+     * The boolean value of a [Cnf] or [Cnf.Term] is false for a given binding.
+     */
+    FALSE
 }
 
 /**
@@ -28,14 +37,30 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
             EvaluationResult.UNDEFINED
         }
 
+    /**
+     * Adds a term to the formula.
+     *
+     * @param term New term to add.
+     */
     operator fun plusAssign(term: Term) {
         terms.add(term)
     }
 
+    /**
+     * Adds a single variable term.
+     *
+     * @param variable New term contains this one variable.
+     */
     operator fun plusAssign(variable: Variable) {
         terms.add(Term() + variable)
     }
 
+    /**
+     * Creates a new formula identical to the old one plus one new term.
+     *
+     * @param term Additional term for the new formula.
+     * @return A new formula.
+     */
     operator fun plus(term: Term): Cnf {
         val newKnf = Cnf()
         newKnf.terms.addAll(terms)
@@ -43,6 +68,12 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
         return newKnf
     }
 
+    /**
+     * Creates a new formula identical to the old one plus one new term with one variable.
+     *
+     * @param term Additional variable for the new formula.
+     * @return A new formula.
+     */
     operator fun plus(variable: Variable): Cnf {
         val newKnf = Cnf()
         newKnf.terms.addAll(terms)
@@ -52,6 +83,15 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
 
     /**
      * Model for a single disjunction term used to build [CNF] formulas.
+     *
+     * A term evaluates to [EvaluationResult.FALSE] under a [Binding], iff all positive variables in the term
+     * evaluate to false and all negated variables evaluate to true.
+     * Iff at least one positive variable evaluates to true or at least one negated variable evaluates
+     * to false, the term evaluates [EvaluationResult.TRUE].
+     * Iff the term is neither true nor false it is [EvaluationResult.UNDEFINED]
+     *
+     * @property positiveVariables List of non negated variables in the term.
+     * @property negativeVariables List of negated variables in the term.
      */
     data class Term (
         val positiveVariables: MutableList<Variable> = mutableListOf(),
