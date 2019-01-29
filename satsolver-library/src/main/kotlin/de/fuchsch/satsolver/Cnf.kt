@@ -98,6 +98,12 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
         val negativeVariables: MutableList<Variable> = mutableListOf()
     ) {
 
+        /**
+         * Evaluates this term against a [Binding] to a boolean value or [EvaluationResult.UNDEFINED].
+         *
+         * @param binding The binding that assigns boolean values to the variables in this term.
+         * @return The result of evaluating this term against the binding.
+         */
         fun evaluate(binding: Binding): EvaluationResult =
             if (positiveVariables.any{ binding.boundVariable[it] == true }
                 || negativeVariables.any{ binding.boundVariable[it] == false })
@@ -113,22 +119,44 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
                 }
             }
 
+        /**
+         * Creates a new term with an additional non negated variable.
+         *
+         * @param v The new variable that is present in the new term.
+         * @return A new term that contains all of this variables and the new one.
+         */
         operator fun plus(v: Variable): Term {
             val newTerm = this.copy()
             newTerm.positiveVariables.add(v)
             return newTerm
         }
 
+        /**
+         * Creates a new term with an additional negated variable.
+         *
+         * @param v The new variable that is present in the new term.
+         * @return A new term that contains all of this variables and the new one.
+         */
         operator fun minus(v: Variable): Term {
             val newTerm = this.copy()
             newTerm.negativeVariables.add(v)
             return newTerm
         }
 
+        /**
+         * Adds a new non negated variable to this term.
+         *
+         * @param v The new variable.
+         */
         operator fun plusAssign(v: Variable) {
             positiveVariables.add(v)
         }
 
+        /**
+         * Adds a new negated variable to this term.
+         *
+         * @param v The new variable
+         */
         operator fun minusAssign(v: Variable) {
             negativeVariables.add(v)
         }
