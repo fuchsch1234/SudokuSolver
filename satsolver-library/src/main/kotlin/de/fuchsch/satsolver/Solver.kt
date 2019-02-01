@@ -46,6 +46,16 @@ data class SolverState(
     val binding: Binding
 )
 
+/**
+ * Keeps track of all the internal state necessary to solve a [Cnf] formula.
+ *
+ * @property initialState The [Cnf] and the already assigned variables.
+ * @property backtrackStack Keeps track of all currently applied [Action]s in reverse order.
+ * @property binding Current binding used to try to solve the formula.
+ * @property unboundVariablesInTerms Metadata to keep track how many unassigned variables every term currently has.
+ * @property variablesToTerms Metadata for faster lookup which terms are affected by variable assignments.
+ *
+ */
 class Solver(private val initialState: SolverState) {
 
     private val backtrackStack = Stack<Action>()
@@ -54,6 +64,9 @@ class Solver(private val initialState: SolverState) {
     private val unboundVariablesInTerms = mutableMapOf<Cnf.Term, Int>()
     private val variablesToTerms: MutableMap<Variable, MutableList<Cnf.Term>> = mutableMapOf()
 
+    /**
+     * @constructor Computes initial value for metadata properties unboundVariablesInTerms and variablesToTerms.
+     */
     init {
         for (term in initialState.cnf.terms) {
             unboundVariablesInTerms[term] = term.positiveVariables.count { !binding.binds(it) } +
@@ -63,6 +76,11 @@ class Solver(private val initialState: SolverState) {
         }
     }
 
+    /**
+     * Helper function to undo the assignment a value to a variable and update all internal state.
+     *
+     * @param variable The variable that is unassigned.
+     */
     private fun undoAssignment(variable: Variable) {
         binding.boundVariable.remove(variable)
         variablesToTerms[variable]?.map {
@@ -70,6 +88,12 @@ class Solver(private val initialState: SolverState) {
         }
     }
 
+    /**
+     * Helper function to assign a value to a variable and update all internal state.
+     *
+     * @param variable The variable that is assigned a new value.
+     * @param value The value that is assigned to the variable.
+     */
     private fun assignVariable(variable: Variable, value: Boolean) {
         binding.boundVariable[variable] = value
         variablesToTerms[variable]?.map {
@@ -77,6 +101,16 @@ class Solver(private val initialState: SolverState) {
         }
     }
 
+    /**
+     * Called if the cnf is unsatisfiable against the current binding.
+     *
+     * [Inference] actions are undone and the process is repeated. [Assignment] actions are checked, whether a
+     * different value can be tried. If that's the case the new value is assigned and backtracking stops. If not
+     * the variable assignment is undone and the process is repeated with the next action.
+     *
+     * @throws Unsatisfiable If the backtrackStack is empty, no more options can be tried. In this case the function
+     * throws an Unsatisfiable exception.
+     */
     private fun backtrack() {
         var action = backtrackStack.peek()
         loop@ while (action != null) {
@@ -96,6 +130,17 @@ class Solver(private val initialState: SolverState) {
         }
     }
 
+    /**
+     * Finds variables whose value is completely determined by the current binding and the terms in the cnf.
+     *
+     * Searches all terms that contain the variable that was assigned a new value. If one of the terms does not
+     * already evaluate to true and contains only one unassigned variable, this unassigned variable is assigned
+     * a new value, such that the term evaluates to true.
+     * This kind of assignment is tracked by [Inference] objects on the backtrackStack.
+     *
+     * @param variable This variable was assigned a new value. All checks are done against terms that contain
+     * this variable.
+     */
     private fun inferVariablesFrom(variable: Variable) {
         variablesToTerms[variable]?.map {
             when (it.evaluate(binding)) {
@@ -116,6 +161,17 @@ class Solver(private val initialState: SolverState) {
         }
     }
 
+    /**
+     * Tries to find a satisfying [Binding] for the [Cnf] in initialState.
+     *
+     * The algorithm iteratively assigns new values to variables and tries to infer as many variables as
+     * possible. If the formula is unsatisfiable against the current binding, it undoes as many last [Action]s
+     * as necessary until a new path can be tried.
+     * This kind of assignment is tracked by [Assignment] objects on the backtrackStack.
+     *
+     * @return A [Binding] which evaluates the [Cnf] to [EvaluationResult.TRUE].
+     * @throws Unsatisfiable, iff there is no binding that satisfies the cnf formula.
+     */
     internal fun solve(): Binding {
         val knf = initialState.cnf
         while (true) {
