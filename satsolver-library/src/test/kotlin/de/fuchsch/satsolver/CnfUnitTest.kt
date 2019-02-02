@@ -3,12 +3,12 @@ package de.fuchsch.satsolver
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class KnfUnitTest {
+class CnfUnitTest {
 
     @Test
     fun `A single term evaluates to its value`() {
         val variable = Variable.create()
-        val knf = Knf(mutableListOf(variable))
+        val knf = Cnf(mutableListOf(variable))
         knf += variable
         val trueBinding = Binding(mutableMapOf(variable to true))
         val falseBinding = Binding(mutableMapOf(variable to false))
@@ -20,7 +20,7 @@ class KnfUnitTest {
     @Test
     fun `Evaluating multiple terms works`() {
         val variables = Array(5) { Variable.create() }
-        val knf = Knf(variables.toMutableList())
+        val knf = Cnf(variables.toMutableList())
         knf += variables[0] - variables[1]
         knf += variables[2] + variables[3] + variables[4]
         val binding = Binding(
@@ -37,7 +37,7 @@ class KnfUnitTest {
     @Test
     fun `Evaluating with variables in multiple terms works`() {
         val variables = Array(5) { Variable.create() }
-        val knf = Knf(variables.toMutableList())
+        val knf = Cnf(variables.toMutableList())
         knf += variables[0] - variables[1]
         knf += variables[2]
         knf += variables[0] - variables[3]
