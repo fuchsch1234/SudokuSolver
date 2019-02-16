@@ -1,24 +1,6 @@
 package de.fuchsch.satsolver
 
 /**
- * Possible results for evaluating a term or formula.
- */
-enum class EvaluationResult {
-    /**
-     * The boolean value of a [Cnf] or [Cnf.Term] is true for a given binding.
-     */
-    TRUE,
-    /**
-     * The boolean value of a [Cnf] or [Cnf.Term] is not completely defined for a given binding.
-     */
-    UNDEFINED,
-    /**
-     * The boolean value of a [Cnf] or [Cnf.Term] is false for a given binding.
-     */
-    FALSE
-}
-
-/**
  * Model of a boolean formula in conjunctive normal form, that is a conjunction of disjunction terms.
  *
  * @property variables List of variables used in the formulas disjunction terms.
@@ -28,14 +10,16 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
 
     val terms = mutableListOf<Term>()
 
+    /**
+     * Evaluates this formula against a binding that assigns boolean values to variables.
+     *
+     * The formula is evaluated by evaluating all its terms and combining their [EvaluationResult]s
+     *
+     * @param binding The [Binding] used to assign values to variables.
+     * @return An [EvaluationResult] that represents this formulas evaluation against the binding.
+     */
     fun evaluate(binding: Binding): EvaluationResult =
-        if (terms.all { it.evaluate(binding) == EvaluationResult.TRUE}) {
-            EvaluationResult.TRUE
-        } else if (terms.any { it.evaluate(binding) == EvaluationResult.FALSE}) {
-            EvaluationResult.FALSE
-        } else {
-            EvaluationResult.UNDEFINED
-        }
+        terms.map { it.evaluate(binding) }.fold(EvaluationResult.TRUE, EvaluationResult::and)
 
     /**
      * Adds a term to the formula.
@@ -105,19 +89,8 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
          * @return The result of evaluating this term against the binding.
          */
         fun evaluate(binding: Binding): EvaluationResult =
-            if (positiveVariables.any{ binding.boundVariable[it] == true }
-                || negativeVariables.any{ binding.boundVariable[it] == false })
-            {
-                EvaluationResult.TRUE
-            } else {
-                if (positiveVariables.any{ !binding.boundVariable.containsKey(it) }
-                    || negativeVariables.any{ !binding.boundVariable.containsKey(it)})
-                {
-                    EvaluationResult.UNDEFINED
-                } else {
-                    EvaluationResult.FALSE
-                }
-            }
+                positiveVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE, EvaluationResult::or).or(
+                negativeVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE) { acc, v -> acc.or(!v) })
 
         /**
          * Creates a new term with an additional non negated variable.
