@@ -1,12 +1,12 @@
 package de.fuchsch.satsolver
 
 /**
- * Model of a boolean formula in conjunctive normal form, that is a conjunction of disjunction terms.
+ * Model of a boolean formula in disjunctive normal form, that is a disjunction of disjunction terms.
  *
  * @property variables List of variables used in the formulas disjunction terms.
  * @property terms List of disjunction terms that build the formula.
  */
-class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
+class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
 
     val terms = mutableListOf<Term>()
 
@@ -19,7 +19,7 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @return An [EvaluationResult] that represents this formulas evaluation against the binding.
      */
     fun evaluate(binding: Binding): EvaluationResult =
-        terms.map { it.evaluate(binding) }.fold(EvaluationResult.TRUE, EvaluationResult::and)
+        terms.map { it.evaluate(binding) }.fold(EvaluationResult.FALSE, EvaluationResult::or)
 
     /**
      * Adds a term to the formula.
@@ -45,8 +45,8 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @param term Additional term for the new formula.
      * @return A new formula.
      */
-    operator fun plus(term: Term): Cnf {
-        val newKnf = Cnf()
+    operator fun plus(term: Term): Dnf {
+        val newKnf = Dnf()
         newKnf.terms.addAll(terms)
         newKnf.terms.add(term)
         return newKnf
@@ -58,15 +58,15 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @param term Additional variable for the new formula.
      * @return A new formula.
      */
-    operator fun plus(variable: Variable): Cnf {
-        val newKnf = Cnf()
+    operator fun plus(variable: Variable): Dnf {
+        val newKnf = Dnf()
         newKnf.terms.addAll(terms)
         newKnf += variable
         return newKnf
     }
 
     /**
-     * Model for a single disjunction term used to build [CNF] formulas.
+     * Model for a single disjunction term used to build [Dnf] formulas.
      *
      * A term evaluates to [EvaluationResult.FALSE] under a [Binding], iff all positive variables in the term
      * evaluate to false and all negated variables evaluate to true.
@@ -89,8 +89,9 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
          * @return The result of evaluating this term against the binding.
          */
         fun evaluate(binding: Binding): EvaluationResult =
-                positiveVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE, EvaluationResult::or).or(
-                negativeVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE) { acc, v -> acc.or(!v) })
+            positiveVariables.map { binding.evaluate(it) }.fold(EvaluationResult.TRUE, EvaluationResult::and).and(
+                negativeVariables.map { binding.evaluate(it) }.fold(EvaluationResult.TRUE) { acc, v -> acc.and(!v) }
+            )
 
         /**
          * Creates a new term with an additional non negated variable.
