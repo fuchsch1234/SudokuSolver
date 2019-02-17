@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClassName = "${group}.SudokuSolver.SudokuSolver"
+    mainClassName = "$group.SudokuSolver.SudokuSolver"
 }
 
 dependencies {

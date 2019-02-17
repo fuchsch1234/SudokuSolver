@@ -6,9 +6,9 @@ package de.fuchsch.satsolver
  * @property variables List of variables used in the formulas disjunction terms.
  * @property terms List of disjunction terms that build the formula.
  */
-class Dnf (val variables: MutableSet<Variable> = mutableSetOf()) {
+class Dnf (private val variables: MutableSet<Variable> = mutableSetOf()) {
 
-    val terms = mutableListOf<Term>()
+    private val terms = mutableListOf<Term>()
 
     /**
      * Evaluates this formula against a binding that assigns boolean values to variables.
@@ -55,7 +55,7 @@ class Dnf (val variables: MutableSet<Variable> = mutableSetOf()) {
     /**
      * Creates a new formula identical to the old one plus one new term with one variable.
      *
-     * @param term Additional variable for the new formula.
+     * @param variable Additional variable for the new formula.
      * @return A new formula.
      */
     operator fun plus(variable: Variable): Dnf {

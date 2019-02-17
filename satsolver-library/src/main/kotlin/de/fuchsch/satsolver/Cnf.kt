@@ -55,7 +55,7 @@ class Cnf (val variables: MutableSet<Variable> = mutableSetOf()) {
     /**
      * Creates a new formula identical to the old one plus one new term with one variable.
      *
-     * @param term Additional variable for the new formula.
+     * @param variable Additional variable for the new formula.
      * @return A new formula.
      */
     operator fun plus(variable: Variable): Cnf {
@@ -66,7 +66,7 @@ class Cnf (val variables: MutableSet<Variable> = mutableSetOf()) {
     }
 
     /**
-     * Model for a single disjunction term used to build [CNF] formulas.
+     * Model for a single disjunction term used to build [Cnf] formulas.
      *
      * A term evaluates to [EvaluationResult.FALSE] under a [Binding], iff all positive variables in the term
      * evaluate to false and all negated variables evaluate to true.
