@@ -31,7 +31,7 @@ internal data class Inference(val variable: Variable): Action()
  * Exception that is thrown if there exists no binding, satisfying the given
  * boundary conditions, that evaluates a [Cnf] to true.
  *
- * @property what Message describing the exception.
+ * @param what Message describing the exception.
  */
 class Unsatisfiable(what: String): Error(what)
 

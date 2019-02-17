@@ -8,7 +8,7 @@ class DnfUnitTest {
     @Test
     fun `A single term evaluates to its value`() {
         val variable = Variable.create()
-        val dnf = Dnf(mutableListOf(variable))
+        val dnf = Dnf(mutableSetOf(variable))
         dnf += variable
         val trueBinding = Binding(mutableMapOf(variable to true))
         val falseBinding = Binding(mutableMapOf(variable to false))
@@ -20,7 +20,7 @@ class DnfUnitTest {
     @Test
     fun `Evaluating multiple terms works`() {
         val variables = Array(5) { Variable.create() }
-        val dnf = Dnf(variables.toMutableList())
+        val dnf = Dnf(variables.toMutableSet())
         dnf += Dnf.Term() + variables[0] - variables[1]
         dnf += Dnf.Term() + variables[2] + variables[3] + variables[4]
         val binding = Binding(
@@ -37,7 +37,7 @@ class DnfUnitTest {
     @Test
     fun `Evaluating with variables in multiple terms works`() {
         val variables = Array(5) { Variable.create() }
-        val dnf = Dnf(variables.toMutableList())
+        val dnf = Dnf(variables.toMutableSet())
         dnf += Dnf.Term() + variables[0] - variables[1]
         dnf += Dnf.Term() + variables[2]
         dnf += Dnf.Term() + variables[0] - variables[3]

@@ -6,7 +6,7 @@ package de.fuchsch.satsolver
  * @property variables List of variables used in the formulas disjunction terms.
  * @property terms List of disjunction terms that build the formula.
  */
-class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
+class Cnf (val variables: MutableSet<Variable> = mutableSetOf()) {
 
     val terms = mutableListOf<Term>()
 
@@ -19,7 +19,7 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @return An [EvaluationResult] that represents this formulas evaluation against the binding.
      */
     fun evaluate(binding: Binding): EvaluationResult =
-        terms.map { it.evaluate(binding) }.fold(EvaluationResult.TRUE, EvaluationResult::and)
+        terms.fold(EvaluationResult.TRUE) { acc, term -> acc.and(term.evaluate(binding)) }
 
     /**
      * Adds a term to the formula.
@@ -55,7 +55,7 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
     /**
      * Creates a new formula identical to the old one plus one new term with one variable.
      *
-     * @param term Additional variable for the new formula.
+     * @param variable Additional variable for the new formula.
      * @return A new formula.
      */
     operator fun plus(variable: Variable): Cnf {
@@ -66,7 +66,7 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
     }
 
     /**
-     * Model for a single disjunction term used to build [CNF] formulas.
+     * Model for a single disjunction term used to build [Cnf] formulas.
      *
      * A term evaluates to [EvaluationResult.FALSE] under a [Binding], iff all positive variables in the term
      * evaluate to false and all negated variables evaluate to true.
@@ -78,8 +78,8 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @property negativeVariables List of negated variables in the term.
      */
     data class Term (
-        val positiveVariables: MutableList<Variable> = mutableListOf(),
-        val negativeVariables: MutableList<Variable> = mutableListOf()
+        val positiveVariables: MutableSet<Variable> = mutableSetOf(),
+        val negativeVariables: MutableSet<Variable> = mutableSetOf()
     ) {
 
         /**
@@ -89,8 +89,8 @@ class Cnf (val variables: MutableList<Variable> = mutableListOf()) {
          * @return The result of evaluating this term against the binding.
          */
         fun evaluate(binding: Binding): EvaluationResult =
-                positiveVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE, EvaluationResult::or).or(
-                negativeVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE) { acc, v -> acc.or(!v) })
+                positiveVariables.fold(EvaluationResult.FALSE) { acc, v -> acc.or(binding.evaluate(v)) }.or(
+                negativeVariables.fold(EvaluationResult.FALSE) { acc, v -> acc.or(!binding.evaluate(v)) })
 
         /**
          * Creates a new term with an additional non negated variable.

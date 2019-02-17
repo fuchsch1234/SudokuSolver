@@ -6,9 +6,9 @@ package de.fuchsch.satsolver
  * @property variables List of variables used in the formulas disjunction terms.
  * @property terms List of disjunction terms that build the formula.
  */
-class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
+class Dnf (private val variables: MutableSet<Variable> = mutableSetOf()) {
 
-    val terms = mutableListOf<Term>()
+    private val terms = mutableListOf<Term>()
 
     /**
      * Evaluates this formula against a binding that assigns boolean values to variables.
@@ -19,7 +19,7 @@ class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @return An [EvaluationResult] that represents this formulas evaluation against the binding.
      */
     fun evaluate(binding: Binding): EvaluationResult =
-        terms.map { it.evaluate(binding) }.fold(EvaluationResult.FALSE, EvaluationResult::or)
+        terms.fold(EvaluationResult.FALSE) { acc, term -> acc.or(term.evaluate(binding)) }
 
     /**
      * Adds a term to the formula.
@@ -55,7 +55,7 @@ class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
     /**
      * Creates a new formula identical to the old one plus one new term with one variable.
      *
-     * @param term Additional variable for the new formula.
+     * @param variable Additional variable for the new formula.
      * @return A new formula.
      */
     operator fun plus(variable: Variable): Dnf {
@@ -63,6 +63,26 @@ class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
         newKnf.terms.addAll(terms)
         newKnf += variable
         return newKnf
+    }
+
+    /**
+     * Convert this formula to a equisatisfiable [Cnf].
+     *
+     * @return A equisatisfiable [Cnf].
+     */
+    fun toCnf(): Cnf {
+        val intermediateVariables = Array(terms.size) { Variable.create() }
+        val cnf = Cnf((variables + intermediateVariables).toMutableSet())
+        terms.forEach { term ->
+            term.positiveVariables.forEach { variable ->
+                cnf += variable - intermediateVariables[0]
+            }
+            term.negativeVariables.forEach { variable ->
+                cnf += -intermediateVariables[0] - variable
+            }
+        }
+        cnf += intermediateVariables.fold(Cnf.Term()) { acc, v -> acc + v }
+        return cnf
     }
 
     /**
@@ -78,8 +98,8 @@ class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @property negativeVariables List of negated variables in the term.
      */
     data class Term (
-        val positiveVariables: MutableList<Variable> = mutableListOf(),
-        val negativeVariables: MutableList<Variable> = mutableListOf()
+        val positiveVariables: MutableSet<Variable> = mutableSetOf(),
+        val negativeVariables: MutableSet<Variable> = mutableSetOf()
     ) {
 
         /**
@@ -89,8 +109,8 @@ class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
          * @return The result of evaluating this term against the binding.
          */
         fun evaluate(binding: Binding): EvaluationResult =
-            positiveVariables.map { binding.evaluate(it) }.fold(EvaluationResult.TRUE, EvaluationResult::and).and(
-                negativeVariables.map { binding.evaluate(it) }.fold(EvaluationResult.TRUE) { acc, v -> acc.and(!v) }
+            positiveVariables.fold(EvaluationResult.TRUE) { acc, variable -> acc.and(binding.evaluate(variable)) }.and(
+                negativeVariables.fold(EvaluationResult.TRUE) { acc, variable -> acc.and(!binding.evaluate(variable)) }
             )
 
         /**
