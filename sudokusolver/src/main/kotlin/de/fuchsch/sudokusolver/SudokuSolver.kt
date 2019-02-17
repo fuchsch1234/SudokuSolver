@@ -1,4 +1,4 @@
-package de.fuchsch.SudokuSolver
+package de.fuchsch.sudokusolver
 
 class SudokuSolver {
 
