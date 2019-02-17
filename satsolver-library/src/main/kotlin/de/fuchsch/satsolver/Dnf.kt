@@ -66,6 +66,26 @@ class Dnf (private val variables: MutableSet<Variable> = mutableSetOf()) {
     }
 
     /**
+     * Convert this formula to a equisatisfiable [Cnf].
+     *
+     * @return A equisatisfiable [Cnf].
+     */
+    fun toCnf(): Cnf {
+        val intermediateVariables = Array(terms.size) { Variable.create() }
+        val cnf = Cnf((variables + intermediateVariables).toMutableSet())
+        terms.forEach { term ->
+            term.positiveVariables.forEach { variable ->
+                cnf += variable - intermediateVariables[0]
+            }
+            term.negativeVariables.forEach { variable ->
+                cnf += -intermediateVariables[0] - variable
+            }
+        }
+        cnf += intermediateVariables.fold(Cnf.Term()) { acc, v -> acc + v }
+        return cnf
+    }
+
+    /**
      * Model for a single disjunction term used to build [Dnf] formulas.
      *
      * A term evaluates to [EvaluationResult.FALSE] under a [Binding], iff all positive variables in the term

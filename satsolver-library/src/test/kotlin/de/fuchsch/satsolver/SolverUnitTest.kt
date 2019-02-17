@@ -49,4 +49,14 @@ class SolverUnitTest {
         val solution = solve(SolverState(knf, Binding()))
         assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
     }
+
+    @Test
+    fun `Solving a Dnf works`() {
+        val variables = Array(4) { Variable.create() }
+        val dnf = Dnf(variables.toMutableSet())
+        dnf += Dnf.Term() + variables[0] - variables[1] + variables[2]
+        val cnf = dnf.toCnf()
+        val solution = solve(SolverState(cnf, Binding()))
+        assertEquals(EvaluationResult.TRUE, dnf.evaluate(solution))
+    }
 }
