@@ -6,7 +6,7 @@ package de.fuchsch.satsolver
  * @property variables List of variables used in the formulas disjunction terms.
  * @property terms List of disjunction terms that build the formula.
  */
-class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
+class Dnf (val variables: MutableSet<Variable> = mutableSetOf()) {
 
     val terms = mutableListOf<Term>()
 
@@ -78,8 +78,8 @@ class Dnf (val variables: MutableList<Variable> = mutableListOf()) {
      * @property negativeVariables List of negated variables in the term.
      */
     data class Term (
-        val positiveVariables: MutableList<Variable> = mutableListOf(),
-        val negativeVariables: MutableList<Variable> = mutableListOf()
+        val positiveVariables: MutableSet<Variable> = mutableSetOf(),
+        val negativeVariables: MutableSet<Variable> = mutableSetOf()
     ) {
 
         /**
