@@ -19,7 +19,7 @@ class Cnf (val variables: MutableSet<Variable> = mutableSetOf()) {
      * @return An [EvaluationResult] that represents this formulas evaluation against the binding.
      */
     fun evaluate(binding: Binding): EvaluationResult =
-        terms.map { it.evaluate(binding) }.fold(EvaluationResult.TRUE, EvaluationResult::and)
+        terms.fold(EvaluationResult.TRUE) { acc, term -> acc.and(term.evaluate(binding)) }
 
     /**
      * Adds a term to the formula.
@@ -89,8 +89,8 @@ class Cnf (val variables: MutableSet<Variable> = mutableSetOf()) {
          * @return The result of evaluating this term against the binding.
          */
         fun evaluate(binding: Binding): EvaluationResult =
-                positiveVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE, EvaluationResult::or).or(
-                negativeVariables.map { binding.evaluate(it) }.fold(EvaluationResult.FALSE) { acc, v -> acc.or(!v) })
+                positiveVariables.fold(EvaluationResult.FALSE) { acc, v -> acc.or(binding.evaluate(v)) }.or(
+                negativeVariables.fold(EvaluationResult.FALSE) { acc, v -> acc.or(!binding.evaluate(v)) })
 
         /**
          * Creates a new term with an additional non negated variable.

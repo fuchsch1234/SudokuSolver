@@ -19,7 +19,7 @@ class Dnf (private val variables: MutableSet<Variable> = mutableSetOf()) {
      * @return An [EvaluationResult] that represents this formulas evaluation against the binding.
      */
     fun evaluate(binding: Binding): EvaluationResult =
-        terms.map { it.evaluate(binding) }.fold(EvaluationResult.FALSE, EvaluationResult::or)
+        terms.fold(EvaluationResult.FALSE) { acc, term -> acc.or(term.evaluate(binding)) }
 
     /**
      * Adds a term to the formula.
@@ -89,8 +89,8 @@ class Dnf (private val variables: MutableSet<Variable> = mutableSetOf()) {
          * @return The result of evaluating this term against the binding.
          */
         fun evaluate(binding: Binding): EvaluationResult =
-            positiveVariables.map { binding.evaluate(it) }.fold(EvaluationResult.TRUE, EvaluationResult::and).and(
-                negativeVariables.map { binding.evaluate(it) }.fold(EvaluationResult.TRUE) { acc, v -> acc.and(!v) }
+            positiveVariables.fold(EvaluationResult.TRUE) { acc, variable -> acc.and(binding.evaluate(variable)) }.and(
+                negativeVariables.fold(EvaluationResult.TRUE) { acc, variable -> acc.and(!binding.evaluate(variable)) }
             )
 
         /**
