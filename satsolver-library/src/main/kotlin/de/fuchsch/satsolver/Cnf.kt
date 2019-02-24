@@ -22,6 +22,16 @@ class Cnf (val variables: MutableSet<Variable> = mutableSetOf()) {
         terms.fold(EvaluationResult.TRUE) { acc, term -> acc.and(term.evaluate(binding)) }
 
     /**
+     * Adds another [Cnf] to this one by adding the variables and terms.
+     *
+     * @param cnf The new cnf formula added to this formula.
+     */
+    operator fun plusAssign(cnf: Cnf) {
+        variables.addAll(cnf.variables)
+        terms.addAll(cnf.terms)
+    }
+
+    /**
      * Adds a term to the formula.
      *
      * @param term New term to add.
