@@ -1,6 +1,8 @@
 package de.fuchsch.sudokusolver
 
+import de.fuchsch.satsolver.*
 import java.security.InvalidParameterException
+import kotlin.math.sqrt
 
 enum class SudokuSize(val size: Int) {
     SUDOKU4x4(4),
@@ -11,8 +13,71 @@ class Sudoku(private val size: SudokuSize = SudokuSize.SUDOKU9x9) {
 
     private val grid: Array<IntArray> = Array(size.size) { IntArray(size.size) }
 
-    fun solve() {
+    private fun exactlyOneOf(variables: List<Variable>): Dnf {
+        val dnf = Dnf(variables.toMutableSet())
+        variables.map {variable ->
+            dnf += variables.fold(Dnf.Term()) { acc, v ->
+                if (v == variable) {
+                    acc + v
+                } else {
+                    acc - v
+                }
+            }
+        }
+        return dnf
+    }
 
+    fun solve() {
+        val variables = Array(size.size) { Array(size.size) { Array(size.size) { Variable.create() }}}
+        val cnf = Cnf()
+        // Only one number in each field
+        for (x in 0 until size.size) {
+            for (y in 0 until size.size) {
+                cnf += exactlyOneOf(variables[y][x].toList()).toCnf()
+            }
+        }
+        // Every line contains every number only once
+        for (y in 0 until size.size) {
+            for (n in 0 until size.size) {
+                val line = mutableListOf<Variable>()
+                for (x in 0 until size.size) {
+                    line.add(variables[y][x][n])
+                }
+                cnf += exactlyOneOf(line).toCnf()
+            }
+        }
+        // Every column contains every number only once
+        for (x in 0 until size.size) {
+            for (n in 0 until size.size) {
+                val line = mutableListOf<Variable>()
+                for (y in 0 until size.size) {
+                    line.add(variables[y][x][n])
+                }
+                cnf += exactlyOneOf(line).toCnf()
+            }
+        }
+        // Every quadrant contains every number only once
+        val qsize = sqrt(size.size.toDouble())
+
+        // Solve the Sudoku
+        val binding = Binding()
+        for (x in 0 until size.size) {
+            for (y in 0 until size.size) {
+                for (n in 0 until size.size) {
+                    if (grid[y][x] == n + 1) binding.boundVariable[variables[y][x][n]] = true
+                }
+            }
+        }
+        val solution = de.fuchsch.satsolver.solve(SolverState(cnf, binding))
+
+        // Apply solution
+        for (x in 0 until size.size) {
+            for (y in 0 until size.size) {
+                for (n in 0 until size.size) {
+                    if (solution.evaluate(variables[y][x][n]) == EvaluationResult.TRUE) grid[y][x] = n + 1
+                }
+            }
+        }
     }
 
     override fun toString(): String =
