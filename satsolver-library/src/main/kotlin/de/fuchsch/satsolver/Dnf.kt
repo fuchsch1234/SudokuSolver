@@ -73,12 +73,12 @@ class Dnf (private val variables: MutableSet<Variable> = mutableSetOf()) {
     fun toCnf(): Cnf {
         val intermediateVariables = Array(terms.size) { Variable.create() }
         val cnf = Cnf((variables + intermediateVariables).toMutableSet())
-        terms.forEach { term ->
+        terms.withIndex().forEach { (idx, term) ->
             term.positiveVariables.forEach { variable ->
-                cnf += variable - intermediateVariables[0]
+                cnf += variable - intermediateVariables[idx]
             }
             term.negativeVariables.forEach { variable ->
-                cnf += -intermediateVariables[0] - variable
+                cnf += -intermediateVariables[idx] - variable
             }
         }
         cnf += intermediateVariables.fold(Cnf.Term()) { acc, v -> acc + v }
