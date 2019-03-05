@@ -7,58 +7,63 @@ class SolverUnitTest {
 
     @Test
     fun `Solving a single variable term works`() {
-        val variable = Variable.create()
-        val knf = Cnf(mutableSetOf(variable))
-        knf += variable
-        val solution = solve(SolverState(knf, Binding()))
-        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+        val literal = Literal.create()
+        val solution = solve(literal)
+        assertEquals(true, solution.evaluate(literal))
     }
 
     @Test
-    fun `Solving with multiple variables works`() {
-        val variables = Array(5) { Variable.create() }
-        val knf = Cnf(variables.toMutableSet())
-        knf += variables[0] - variables[1]
-        knf += variables[2] + variables[3] + variables[4]
-        val solution = solve(SolverState(knf, Binding()))
-        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+    fun `Solving with multiple literals works`() {
+        val literals = Array(5) { Literal.create() }
+        val clause = (literals[0] / literals[1]) + (literals[2] / !literals[4]) + (literals[1] / !literals[2])
+        val binding = Binding()
+        binding[literals[1]] = false
+        val solution = solve(clause, binding)
+        assertEquals(true, clause.evaluate(solution))
+        assertEquals(true, solution[literals[0]])
+        assertEquals(false, solution[literals[1]])
+        assertEquals(false, solution[literals[2]])
+        assertEquals(false, solution[literals[4]])
     }
 
     @Test
     fun `Solving a equation that enforces backtracking`() {
-        val variables = Array(5) { Variable.create() }
-        val knf = Cnf(variables.toMutableSet())
-        knf += variables[0] - variables[1]
-        knf += variables[2]
-        knf += variables[0] - variables[3]
-        knf += variables[0] - variables[4]
-        knf += variables[3] + variables[4]
-        val solution = solve(SolverState(knf, Binding()))
-        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+        val literals = Array(5) { Literal.create() }
+        val clause = (literals[0] / !literals[1]) +
+                literals[2] +
+                (literals[0] / literals[3]) +
+                (literals[0] / !literals[4]) +
+                (literals[3] / literals[4])
+        val solution = solve(clause)
+        assertEquals(true, clause.evaluate(solution))
     }
 
     @Test
     fun `Solving a 20 variable equation`() {
-        val variables = Array(20) { Variable.create() }
-        val knf = Cnf(variables.toMutableSet())
+        val literals = Array(20) { Literal.create() }
+        /*
+        val knf = Cnf(literals.toMutableSet())
         for (i in 0..18) {
-            knf += variables[i] - variables[18]
-            knf += variables[i] - variables[19]
+            knf += literals[i] - literals[18]
+            knf += literals[i] - literals[19]
         }
-        knf += variables[18] + variables[19]
-        val solution = solve(SolverState(knf, Binding()))
+        knf += literals[18] + literals[19]
+        val solution = solve()
         assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+        */
     }
 
     @Test
     fun `Solving a Dnf works`() {
-        val variables = Array(4) { Variable.create() }
-        val dnf = Dnf(variables.toMutableSet())
-        dnf += Dnf.Term() + variables[0] - variables[1] - variables[2]
-        dnf += Dnf.Term() - variables[0] + variables[1] - variables[2]
-        dnf += Dnf.Term() - variables[0] - variables[1] + variables[2]
+        val literals = Array(4) { Literal.create() }
+        /*
+        val dnf = Dnf(literals.toMutableSet())
+        dnf += Dnf.Term() + literals[0] - literals[1] - literals[2]
+        dnf += Dnf.Term() - literals[0] + literals[1] - literals[2]
+        dnf += Dnf.Term() - literals[0] - literals[1] + literals[2]
         val cnf = dnf.toCnf()
-        val solution = solve(SolverState(cnf, Binding()))
+        val solution = solve()
         assertEquals(EvaluationResult.TRUE, dnf.evaluate(solution))
+        */
     }
 }

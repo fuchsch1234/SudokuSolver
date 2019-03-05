@@ -1,74 +1,53 @@
 package de.fuchsch.satsolver
 
-/**
- * Possible results for evaluating a term or formula.
- */
 enum class EvaluationResult {
-    /**
-     * The boolean value of a [Cnf], [Cnf.Term], [Dnf] or [Dnf.Term] is true for a given binding.
-     */
     TRUE,
-    /**
-     * The boolean value of a [Cnf], [Cnf.Term], [Dnf] or [Dnf.Term] is not completely defined for a given binding.
-     */
     UNDEFINED,
-    /**
-     * The boolean value of a [Cnf], [Cnf.Term], [Dnf] or [Dnf.Term] is false for a given binding.
-     */
-    FALSE
+    FALSE,
 }
 
-/**
- * Join two [EvaluationResult]s using the or operator.
- *
- * @param rhs Right hand side evaluation result.
- * @return this or rhs.
- */
-infix fun EvaluationResult.or(rhs: EvaluationResult): EvaluationResult = minOf(this, rhs)
-
-/**
- * Join two [EvaluationResult]s using the and operator.
- *
- * @param rhs Right hand side evaluation result.
- * @return this and rhs.
- */
-infix fun EvaluationResult.and(rhs: EvaluationResult): EvaluationResult = maxOf(this, rhs)
-
-/**
- * Logical not of [EvaluationResult].
- *
- * @return Logic negation of this.
- */
-operator fun EvaluationResult.not(): EvaluationResult = when (this) {
+operator fun EvaluationResult.not() = when(this) {
     EvaluationResult.TRUE -> EvaluationResult.FALSE
     EvaluationResult.FALSE -> EvaluationResult.TRUE
-    else -> EvaluationResult.UNDEFINED
+    EvaluationResult.UNDEFINED -> EvaluationResult.UNDEFINED
 }
 
+infix fun EvaluationResult.or(rhs: EvaluationResult) = minOf(this, rhs)
+
+infix fun EvaluationResult.and(rhs: EvaluationResult) = maxOf(this, rhs)
+
 /**
- * Models the binding of [Variables][Variable] to boolean values.
+ * Models the binding of [Literals][Literal] to boolean values.
  *
  * @property boundVariable The mutable binding from Variables to boolean values.
  */
 data class Binding(
-    val boundVariable: MutableMap<Variable, Boolean> = mutableMapOf()
+    val boundVariable: MutableMap<Literal, Boolean> = mutableMapOf()
 ) {
+
+    operator fun set(literal: Literal, value: Boolean) {
+        boundVariable[literal] = value
+    }
+
+    operator fun get(literal: Literal) = boundVariable[literal]
+
+    fun deepCopy() = Binding(boundVariable.toMutableMap())
 
     /**
      * Queries the Binding if a variable is bound by it.
      *
-     * @param variable The variable to test against this binding.
+     * @param literal The variable to test against this binding.
      * @return True if the variable is bound by this binding, otherwise false.
      */
-    fun binds(variable: Variable): Boolean = boundVariable.containsKey(variable)
+    fun binds(literal: Literal): Boolean = boundVariable.containsKey(literal)
 
     /**
-     * Evaluates a [Variable].
+     * Evaluates a [Literal].
      *
-     * @param variable The variable to evaluate.
-     * @return A [EvaluationResult] representing the variables value in this binding.
+     * @param literal The variable to evaluate.
+     * @return A [Result] representing the variables value in this binding.
      */
-    fun evaluate(variable: Variable): EvaluationResult = when (boundVariable[variable]) {
+    fun evaluate(literal: Literal): EvaluationResult = when (boundVariable[literal]) {
         true -> EvaluationResult.TRUE
         false -> EvaluationResult.FALSE
         else -> EvaluationResult.UNDEFINED
