@@ -1,5 +1,6 @@
 package de.fuchsch.satsolver
 
+import org.slf4j.LoggerFactory
 import java.util.*
 
 /**
@@ -63,6 +64,12 @@ class Solver(private val clause: Clause, private val binding: Binding) {
      */
     internal fun solve(): Binding {
         throw NotImplementedError()
+    }
+
+    companion object {
+
+        private val logger = LoggerFactory.getLogger(javaClass.enclosingClass.name)
+
     }
 
 }
