@@ -1,5 +1,6 @@
 package de.fuchsch.satsolver
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class ClauseUnitTest {
@@ -8,6 +9,7 @@ class ClauseUnitTest {
     fun `Evaluating a single literal works`() {
         val literal = Literal.create()
         val binding = Binding()
+        assertEquals(1, literal.size)
         assert(literal.evaluate(binding) == EvaluationResult.UNDEFINED)
         binding[literal] = false
         assert(literal.evaluate(binding) == EvaluationResult.FALSE)
@@ -19,6 +21,7 @@ class ClauseUnitTest {
     fun `Empty OrClause evaluates false`() {
         val clause = OrClause(emptyList())
         val binding = Binding()
+        assertEquals(0, clause.size)
         assert(clause.evaluate(binding) == EvaluationResult.FALSE)
     }
 
@@ -26,6 +29,7 @@ class ClauseUnitTest {
     fun `Empty AndClause evaluates true`() {
         val clause = AndClause(emptyList())
         val binding = Binding()
+        assertEquals(0, clause.size)
         assert(clause.evaluate(binding) == EvaluationResult.TRUE)
     }
 
@@ -36,6 +40,7 @@ class ClauseUnitTest {
         val binding = Binding()
         binding[literals[0]] = true
         binding[literals[1]] = false
+        assertEquals(2, clause.size)
         assert(clause.evaluate(binding) == EvaluationResult.TRUE)
     }
 
@@ -46,6 +51,7 @@ class ClauseUnitTest {
         val binding = Binding()
         binding[literals[0]] = true
         binding[literals[1]] = false
+        assertEquals(2, clause.size)
         assert(clause.evaluate(binding) == EvaluationResult.TRUE)
     }
 

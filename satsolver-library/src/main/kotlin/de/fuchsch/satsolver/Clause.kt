@@ -11,6 +11,9 @@ sealed class Clause {
 
     abstract fun evaluate(binding: Binding): EvaluationResult
 
+    open val size: Int
+        get() = throw NotImplementedError()
+
 }
 
 data class Literal private constructor (val id: Long): Clause() {
@@ -27,11 +30,17 @@ data class Literal private constructor (val id: Long): Clause() {
 
     override fun evaluate(binding: Binding): EvaluationResult = binding.evaluate(this)
 
+    override val size: Int
+        get() = 1
+
 }
 
 data class Negation(val variable: Literal): Clause() {
 
     override fun evaluate(binding: Binding): EvaluationResult = !variable.evaluate(binding)
+
+    override val size: Int
+        get() = 1
 
 }
 
@@ -44,6 +53,9 @@ data class OrClause(val clauses: List<Clause>): Clause() {
             acc or clause.evaluate(binding)
         }
 
+    override val size: Int
+        get() = clauses.size
+
 }
 
 data class AndClause(val clauses: List<Clause>): Clause() {
@@ -54,5 +66,8 @@ data class AndClause(val clauses: List<Clause>): Clause() {
         clauses.fold(EvaluationResult.TRUE) { acc, clause ->
             acc and clause.evaluate(binding)
         }
+
+    override val size: Int
+        get() = clauses.size
 
 }
