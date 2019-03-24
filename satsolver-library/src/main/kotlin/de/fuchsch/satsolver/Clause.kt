@@ -2,12 +2,23 @@ package de.fuchsch.satsolver
 
 import java.util.concurrent.atomic.AtomicLong
 
+data class Variable private constructor (val id: Long) {
+
+    companion object {
+
+        private val nextId = AtomicLong(1)
+
+        fun create() = Variable(nextId.getAndIncrement())
+
+    }
+
+}
 
 sealed class Clause {
 
-    open operator fun plus(clause: Clause): Clause = AndClause(listOf(this, clause))
+    open operator fun plus(clause: Clause): Clause = AndClause(mutableListOf(this, clause))
 
-    open operator fun div(clause: Clause): Clause = OrClause(listOf(this, clause))
+    open operator fun div(clause: Clause): Clause = OrClause(mutableListOf(this, clause))
 
     abstract fun evaluate(binding: Binding): EvaluationResult
 
@@ -16,37 +27,38 @@ sealed class Clause {
 
 }
 
-data class Literal private constructor (val id: Long): Clause() {
+sealed class Literal (val variable: Variable): Clause() {
 
-    companion object {
+    class Positive(v: Variable): Literal(v) {
 
-        private val nextId = AtomicLong(1)
+        override operator fun not(): Literal = Negation(variable)
 
-        fun create() = Literal(nextId.getAndIncrement())
+        override fun evaluate(binding: Binding): EvaluationResult = binding.evaluate(variable)
 
     }
 
-    operator fun not(): Negation = Negation(this)
+    class Negation(v: Variable): Literal(v) {
 
-    override fun evaluate(binding: Binding): EvaluationResult = binding.evaluate(this)
+        override operator fun not(): Literal = Positive(variable)
 
-    override val size: Int
-        get() = 1
+        override fun evaluate(binding: Binding): EvaluationResult = !binding.evaluate(variable)
 
-}
+    }
 
-data class Negation(val variable: Literal): Clause() {
-
-    override fun evaluate(binding: Binding): EvaluationResult = !variable.evaluate(binding)
+    abstract operator fun not(): Literal
 
     override val size: Int
         get() = 1
 
 }
 
-data class OrClause(val clauses: List<Clause>): Clause() {
+data class OrClause(val clauses: MutableList<Clause>): Clause() {
 
-    override operator fun div(clause: Clause): Clause = OrClause(this.clauses + clause)
+    override operator fun div(clause: Clause): Clause = OrClause((this.clauses + clause).toMutableList())
+
+    operator fun divAssign(clause: Clause) {
+        clauses.add(clause)
+    }
 
     override fun evaluate(binding: Binding): EvaluationResult =
         clauses.fold(EvaluationResult.FALSE) { acc, clause ->
@@ -58,9 +70,13 @@ data class OrClause(val clauses: List<Clause>): Clause() {
 
 }
 
-data class AndClause(val clauses: List<Clause>): Clause() {
+data class AndClause(val clauses: MutableList<Clause>): Clause() {
 
-    override operator fun plus(clause: Clause): Clause = AndClause(this.clauses + clause)
+    override operator fun plus(clause: Clause): Clause = AndClause((this.clauses + clause).toMutableList())
+
+    operator fun plusAssign(clause: Clause) {
+        clauses.add(clause)
+    }
 
     override fun evaluate(binding: Binding): EvaluationResult =
         clauses.fold(EvaluationResult.TRUE) { acc, clause ->

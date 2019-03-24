@@ -7,7 +7,8 @@ class ClauseUnitTest {
 
     @Test
     fun `Evaluating a single literal works`() {
-        val literal = Literal.create()
+        val variable = Variable.create()
+        val literal = Literal.Positive(variable)
         val binding = Binding()
         assertEquals(1, literal.size)
         assert(literal.evaluate(binding) == EvaluationResult.UNDEFINED)
@@ -19,7 +20,7 @@ class ClauseUnitTest {
 
     @Test
     fun `Empty OrClause evaluates false`() {
-        val clause = OrClause(emptyList())
+        val clause = OrClause(emptyList<Clause>().toMutableList())
         val binding = Binding()
         assertEquals(0, clause.size)
         assert(clause.evaluate(binding) == EvaluationResult.FALSE)
@@ -27,7 +28,7 @@ class ClauseUnitTest {
 
     @Test
     fun `Empty AndClause evaluates true`() {
-        val clause = AndClause(emptyList())
+        val clause = AndClause(emptyList<Clause>().toMutableList())
         val binding = Binding()
         assertEquals(0, clause.size)
         assert(clause.evaluate(binding) == EvaluationResult.TRUE)
@@ -35,7 +36,7 @@ class ClauseUnitTest {
 
     @Test
     fun `OrClause evaluates correctly`() {
-        val literals = Array(2) { Literal.create() }
+        val literals = Array(2) { Literal.Positive(Variable.create()) }
         val clause = !literals[0] / !literals[1]
         val binding = Binding()
         binding[literals[0]] = true
@@ -46,7 +47,7 @@ class ClauseUnitTest {
 
     @Test
     fun `AndClause evaluates correctly`() {
-        val literals = Array(2) { Literal.create() }
+        val literals = Array(2) { Literal.Positive(Variable.create()) }
         val clause = literals[0] + !literals[1]
         val binding = Binding()
         binding[literals[0]] = true
