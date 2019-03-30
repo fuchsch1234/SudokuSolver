@@ -22,7 +22,7 @@ infix fun EvaluationResult.and(rhs: EvaluationResult) = maxOf(this, rhs)
  * @property boundVariable The mutable binding from Variables to boolean values.
  */
 data class Binding(
-    val boundVariable: MutableMap<Variable, Boolean> = mutableMapOf()
+    private val boundVariable: MutableMap<Variable, Boolean> = mutableMapOf()
 ) {
 
     operator fun set(variable: Variable, value: Boolean) {
@@ -46,6 +46,9 @@ data class Binding(
      * @return True if the variable is bound by this binding, otherwise false.
      */
     fun binds(variable: Variable): Boolean = boundVariable.contains(variable)
+
+    fun unbind(variable: Variable) = boundVariable.remove(variable)
+    fun unbind(literal: Literal) = boundVariable.remove(literal.variable)
 
     /**
      * Evaluates a [Variable].
