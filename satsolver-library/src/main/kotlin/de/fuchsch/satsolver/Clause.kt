@@ -54,6 +54,8 @@ sealed class Literal (open val variable: Variable): Clause() {
 
 data class OrClause(val clauses: MutableList<Clause>): Clause() {
 
+    constructor(clause: Clause): this(listOf(clause).toMutableList())
+
     override operator fun div(clause: Clause): Clause = OrClause((this.clauses + clause).toMutableList())
 
     operator fun divAssign(clause: Clause) {
@@ -71,6 +73,8 @@ data class OrClause(val clauses: MutableList<Clause>): Clause() {
 }
 
 data class AndClause(val clauses: MutableList<Clause>): Clause() {
+
+    constructor(clause: Clause): this(listOf(clause).toMutableList())
 
     override operator fun plus(clause: Clause): Clause = AndClause((this.clauses + clause).toMutableList())
 
