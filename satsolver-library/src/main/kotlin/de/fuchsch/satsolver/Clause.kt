@@ -27,9 +27,9 @@ sealed class Clause {
 
 }
 
-sealed class Literal (val variable: Variable): Clause() {
+sealed class Literal (open val variable: Variable): Clause() {
 
-    class Positive(v: Variable): Literal(v) {
+    data class Positive(override val variable: Variable): Literal(variable) {
 
         override operator fun not(): Literal = Negation(variable)
 
@@ -37,7 +37,7 @@ sealed class Literal (val variable: Variable): Clause() {
 
     }
 
-    class Negation(v: Variable): Literal(v) {
+    data class Negation(override val variable: Variable): Literal(variable) {
 
         override operator fun not(): Literal = Positive(variable)
 
