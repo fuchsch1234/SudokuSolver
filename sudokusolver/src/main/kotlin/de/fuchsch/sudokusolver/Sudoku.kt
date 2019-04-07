@@ -43,7 +43,20 @@ class Sudoku(private val size: SudokuSize = SudokuSize.SUDOKU9x9) {
             }
         }
         // Every quadrant contains every number only once
-        val qsize = sqrt(size.size.toDouble())
+        val qsize = sqrt(size.size.toDouble()).toInt()
+        for (x in 0 until qsize) {
+            for (y in 0 until qsize) {
+                for (n in 0 until size.size) {
+                    val quadrant = mutableListOf<Variable>()
+                    for (i in 0 until qsize) {
+                        for (j in 0 until qsize) {
+                            quadrant += variables[qsize * y + j][qsize * x + i][n]
+                        }
+                    }
+                    cnf += exactlyOneOf(quadrant)
+                }
+            }
+        }
 
         // Solve the Sudoku
         val binding = Binding()
