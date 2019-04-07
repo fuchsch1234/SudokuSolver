@@ -13,27 +13,13 @@ class Sudoku(private val size: SudokuSize = SudokuSize.SUDOKU9x9) {
 
     private val grid: Array<IntArray> = Array(size.size) { IntArray(size.size) }
 
-    private fun exactlyOneOf(variables: List<Variable>): Dnf {
-        val dnf = Dnf(variables.toMutableSet())
-        variables.map {variable ->
-            dnf += variables.fold(Dnf.Term()) { acc, v ->
-                if (v == variable) {
-                    acc + v
-                } else {
-                    acc - v
-                }
-            }
-        }
-        return dnf
-    }
-
     fun solve() {
         val variables = Array(size.size) { Array(size.size) { Array(size.size) { Variable.create() }}}
-        val cnf = Cnf()
+        val cnf = emptyList<CnfTerm>().toMutableList()
         // Only one number in each field
         for (x in 0 until size.size) {
             for (y in 0 until size.size) {
-                cnf += exactlyOneOf(variables[y][x].toList()).toCnf()
+                cnf += exactlyOneOf(variables[y][x].toList())
             }
         }
         // Every line contains every number only once
@@ -43,7 +29,7 @@ class Sudoku(private val size: SudokuSize = SudokuSize.SUDOKU9x9) {
                 for (x in 0 until size.size) {
                     line.add(variables[y][x][n])
                 }
-                cnf += exactlyOneOf(line).toCnf()
+                cnf += exactlyOneOf(line)
             }
         }
         // Every column contains every number only once
@@ -53,7 +39,7 @@ class Sudoku(private val size: SudokuSize = SudokuSize.SUDOKU9x9) {
                 for (y in 0 until size.size) {
                     line.add(variables[y][x][n])
                 }
-                cnf += exactlyOneOf(line).toCnf()
+                cnf += exactlyOneOf(line)
             }
         }
         // Every quadrant contains every number only once
@@ -64,11 +50,11 @@ class Sudoku(private val size: SudokuSize = SudokuSize.SUDOKU9x9) {
         for (x in 0 until size.size) {
             for (y in 0 until size.size) {
                 for (n in 0 until size.size) {
-                    if (grid[y][x] == n + 1) binding.boundVariable[variables[y][x][n]] = true
+                    if (grid[y][x] == n + 1) cnf += CnfTerm(Literal.Positive(variables[y][x][n]))
                 }
             }
         }
-        val solution = de.fuchsch.satsolver.solve(SolverState(cnf, binding))
+        val solution = de.fuchsch.satsolver.solve(cnf, binding)
 
         // Apply solution
         for (x in 0 until size.size) {
