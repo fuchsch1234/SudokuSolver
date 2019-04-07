@@ -1,5 +1,6 @@
 package de.fuchsch.satsolver
 
+import arrow.optics.optics
 import java.util.concurrent.atomic.AtomicLong
 
 data class Variable private constructor (val id: Long) {
@@ -14,20 +15,34 @@ data class Variable private constructor (val id: Long) {
 
 }
 
-sealed class Clause {
+@optics data class CnfTerm(val literals: List<Literal>) {
 
-    open operator fun plus(clause: Clause): Clause = AndClause(mutableListOf(this, clause))
+    constructor(literal: Literal): this(listOf(literal).toMutableList())
 
-    open operator fun div(clause: Clause): Clause = OrClause(mutableListOf(this, clause))
+    operator fun div(literal: Literal) = CnfTerm(literals + literal)
 
-    abstract fun evaluate(binding: Binding): EvaluationResult
+    operator fun div(term: CnfTerm) = CnfTerm(literals + term.literals)
 
-    open val size: Int
-        get() = throw NotImplementedError()
+    val size: Int
+        get() = literals.size
 
+    fun evaluate(binding: Binding): EvaluationResult =
+        literals.fold(EvaluationResult.FALSE) { acc, literal ->
+            acc or literal.evaluate(binding)
+        }
+
+    companion object {
+
+        fun empty(): CnfTerm = CnfTerm(emptyList<Literal>().toMutableList())
+
+    }
 }
 
-sealed class Literal (open val variable: Variable): Clause() {
+typealias Cnf = List<CnfTerm>
+
+fun Cnf.evaluate(binding: Binding) = this.fold(EvaluationResult.TRUE) { acc, term -> acc and term.evaluate(binding)}
+
+@optics sealed class Literal (open val variable: Variable) {
 
     data class Positive(override val variable: Variable): Literal(variable) {
 
@@ -45,49 +60,30 @@ sealed class Literal (open val variable: Variable): Clause() {
 
     }
 
+    abstract fun evaluate(binding: Binding): EvaluationResult
+
     abstract operator fun not(): Literal
 
-    override val size: Int
-        get() = 1
+    operator fun div(literal: Literal) = CnfTerm(listOf(this, literal))
+
+    companion object
 
 }
 
-data class OrClause(val clauses: MutableList<Clause>): Clause() {
-
-    constructor(clause: Clause): this(listOf(clause).toMutableList())
-
-    override operator fun div(clause: Clause): Clause = OrClause((this.clauses + clause).toMutableList())
-
-    operator fun divAssign(clause: Clause) {
-        clauses.add(clause)
+fun exactlyOneOf(variables: Iterable<Variable>): List<CnfTerm> {
+    val auxiliaryVariables = variables.map { Variable.create() }
+    val result = emptyList<CnfTerm>().toMutableList()
+    result += auxiliaryVariables.fold(CnfTerm.empty()) { term, variable ->
+        term / Literal.Positive(variable)
     }
-
-    override fun evaluate(binding: Binding): EvaluationResult =
-        clauses.fold(EvaluationResult.FALSE) { acc, clause ->
-            acc or clause.evaluate(binding)
+    variables.zip(auxiliaryVariables).forEach { (positiveVariable, auxiliary) ->
+        variables.forEach { variable ->
+            if (variable != positiveVariable) {
+                result += Literal.Negation(auxiliary) / Literal.Negation(variable)
+            } else {
+                result += Literal.Negation(auxiliary) / Literal.Positive(variable)
+            }
         }
-
-    override val size: Int
-        get() = clauses.size
-
-}
-
-data class AndClause(val clauses: MutableList<Clause>): Clause() {
-
-    constructor(clause: Clause): this(listOf(clause).toMutableList())
-
-    override operator fun plus(clause: Clause): Clause = AndClause((this.clauses + clause).toMutableList())
-
-    operator fun plusAssign(clause: Clause) {
-        clauses.add(clause)
     }
-
-    override fun evaluate(binding: Binding): EvaluationResult =
-        clauses.fold(EvaluationResult.TRUE) { acc, clause ->
-            acc and clause.evaluate(binding)
-        }
-
-    override val size: Int
-        get() = clauses.size
-
+    return result
 }
