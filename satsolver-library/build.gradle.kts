@@ -1,5 +1,6 @@
 plugins {
-    id("org.jetbrains.kotlin.jvm")
+    kotlin("jvm")
+    kotlin("kapt")
     id("org.jetbrains.dokka")
 }
 
