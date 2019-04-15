@@ -1,8 +1,10 @@
 package de.fuchsch.satsolver
 
-import arrow.core.none
 import arrow.optics.extensions.*
 import arrow.optics.optics
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.newFixedThreadPoolContext
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 
 /**
@@ -32,15 +34,40 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
     }
 
     private val initialState: SolverState
+    private val scope = newFixedThreadPoolContext(4, "Pool")
 
     init {
         // Construct the initial solver state from the supplied formula
-        val meta = mutableMapOf<Literal, List<CnfTerm>>()
-        formula.forEach { term ->
-            term.literals.forEach { literal -> meta[literal] = meta.getOrDefault(literal, emptyList()) + term }
-        }
+        val meta = reverseMapping(formula)
         initialState = SolverState(formula, meta)
     }
+
+    private fun reverseMapping(formula: List<CnfTerm>): Map<Literal, List<CnfTerm>> =
+        runBlocking(scope) {
+            val meta = mutableMapOf<Literal, List<CnfTerm>>()
+            if (formula.isEmpty()) {
+                meta
+            } else {
+                val producers =
+                    formula.chunked(formula.size / 4).map {
+                        produce {
+                            val meta = mutableMapOf<Literal, List<CnfTerm>>()
+                            it.forEach { term ->
+                                term.literals.forEach { literal ->
+                                    meta[literal] = meta.getOrDefault(literal, emptyList()) + term
+                                }
+                            }
+                            send(meta)
+                        }
+                    }
+                for (producer in producers) {
+                    producer.receive().map { (key, value) ->
+                        meta[key] = meta.getOrDefault(key, emptyList()) + value
+                    }
+                }
+                meta
+            }
+        }
 
     /**
      * Tries to find a satisfying [Binding] for the [Cnf] in initialState.
@@ -75,37 +102,6 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
         state.metaMapping.filter { (key, _) -> isPureLiteral(state, key) }.keys.toList()
 
     /**
-     * Removes all terms that contain one of a list of literals from the [solver state][SolverState].
-     *
-     * @param _state The solver state to mutate.
-     * @param literals All terms containing one of these literals will be removed from the state.
-     * @return A new solver state without the terms containing the literals.
-     */
-    private fun removeTerms(_state: SolverState, literals: List<Literal>): SolverState {
-        val terms = literals.flatMap { _state.metaMapping.getOrDefault(it, emptyList()) }
-        val affectedLiterals = terms.flatMap { it.literals }
-        val formula = _state.formula - terms
-        val mapping = forAllLiterals(affectedLiterals).modify(_state.metaMapping) { it - terms }
-        return SolverState(formula, mapping)
-    }
-
-    /**
-     * Removes literals from all terms that contain them from the [solver state][SolverState].
-     *
-     * @param _state The solver state to mutate.
-     * @param literals These literals will be removed from all terms in the state.
-     * @return A new solver state without the literals.
-     */
-    private fun removeNegatedLiterals(_state: SolverState, literals: List<Literal>): SolverState {
-        val terms = literals.flatMap { _state.metaMapping.getOrDefault(it, emptyList()) }
-        val affectedLiterals = terms.flatMap { it.literals }
-        val formula = (ListTraversal<CnfTerm>() compose CnfTerm.literals).modify(_state.formula) { it - literals }
-        var mapping = forAllTerms(affectedLiterals).modify(_state.metaMapping) { it - literals }
-        mapping = literals.fold(mapping) { acc, literal -> mappingAt(literal).set(acc, none()) }
-        return SolverState(formula, forAllLiterals(literals).modify(mapping) { emptyList() })
-    }
-
-    /**
      * Binds the supplied variables according to their polarity.
      *
      * @param _state The initial solver state.
@@ -121,26 +117,38 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
             }
         }
 
-        // Remove all terms containing one of the assigned literals, because they evaluate to true.
-        val state = removeTerms(_state, literals)
+        if (_state.formula.isEmpty()) {
+            return SolverState(emptyList(), emptyMap())
+        }
 
-        // Remove all negated literals, because they evaluate to false
-        // and do not contribute anything to solving the formula.
+        val terms = literals.flatMap { _state.metaMapping.getOrDefault(it, emptyList()) }
         val negatedLiterals = literals.map { !it }
-        return removeNegatedLiterals(state, negatedLiterals)
+        val formula = runBlocking(scope) {
+            val formula = mutableListOf<CnfTerm>()
+            val producers =
+                _state.formula.chunked(_state.formula.size / 4).map {
+                    produce {
+                        val f = mutableListOf<CnfTerm>()
+                        it.forEach { term ->
+                            if (!(term in terms)) {
+                                f.add(CnfTerm.literals.modify(term) { it - negatedLiterals })
+
+                            }
+                        }
+                        send(f)
+                    }
+                }
+            for (producer in producers) {
+                formula.addAll(producer.receive())
+            }
+            formula
+        }
+        return SolverState(formula, reverseMapping(formula))
     }
 
     /**
      * Helper classes for working with immutable [SolverState] objects.
      */
-    private fun forAllLiterals(literals: List<Literal>) =
-        MapFilterIndex<Literal, List<CnfTerm>>().filter { literals.contains(it) }
-
-    private fun forAllTerms(literals: List<Literal>) =
-        forAllLiterals(literals) compose
-                ListTraversal() compose
-                CnfTerm.literals
-
     private fun mappingAt(literal: Literal) = MapAt<Literal, List<CnfTerm>>().at(literal)
 
     /**

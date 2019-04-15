@@ -9,6 +9,7 @@ dependencies {
     val arrow_version = "0.9.0"
 
     implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.0")
 
     implementation("org.slf4j:slf4j-api:1.7.25")
     implementation("org.slf4j:slf4j-log4j12:1.7.26")
