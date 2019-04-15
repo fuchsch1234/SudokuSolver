@@ -49,7 +49,7 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
                 meta
             } else {
                 val producers =
-                    formula.chunked(formula.size / 4).map {
+                    formula.chunked(maxOf(formula.size / 4, 4)).map {
                         produce {
                             val meta = mutableMapOf<Literal, List<CnfTerm>>()
                             it.forEach { term ->
@@ -126,7 +126,7 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
         val formula = runBlocking(scope) {
             val formula = mutableListOf<CnfTerm>()
             val producers =
-                _state.formula.chunked(_state.formula.size / 4).map {
+                _state.formula.chunked(maxOf(_state.formula.size / 4, 4)).map {
                     produce {
                         val f = mutableListOf<CnfTerm>()
                         it.forEach { term ->
