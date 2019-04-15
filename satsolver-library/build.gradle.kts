@@ -8,13 +8,13 @@ plugins {
 dependencies {
     val arrow_version = "0.9.0"
 
-    compile(kotlin("stdlib"))
+    implementation(kotlin("stdlib"))
 
-    compile("org.slf4j:slf4j-api:1.7.25")
-    compile("org.slf4j:slf4j-log4j12:1.7.26")
+    implementation("org.slf4j:slf4j-api:1.7.25")
+    implementation("org.slf4j:slf4j-log4j12:1.7.26")
 
-    compile("io.arrow-kt:arrow-core-data:$arrow_version")
-    compile("io.arrow-kt:arrow-optics:$arrow_version")
+    implementation("io.arrow-kt:arrow-core-data:$arrow_version")
+    implementation("io.arrow-kt:arrow-optics:$arrow_version")
     kapt("io.arrow-kt:arrow-optics:$arrow_version")
     kapt("io.arrow-kt:arrow-meta:$arrow_version")
 
