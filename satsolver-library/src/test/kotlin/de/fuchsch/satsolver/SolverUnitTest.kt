@@ -7,58 +7,81 @@ class SolverUnitTest {
 
     @Test
     fun `Solving a single variable term works`() {
-        val variable = Variable.create()
-        val knf = Cnf(mutableSetOf(variable))
-        knf += variable
-        val solution = solve(SolverState(knf, Binding()))
-        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+        val literal = Literal.Positive(Variable.create())
+        val clause = listOf(CnfTerm(literal))
+        val solution = solve(clause)
+        assertEquals(EvaluationResult.TRUE, clause.evaluate(solution))
     }
 
     @Test
-    fun `Solving with multiple variables works`() {
-        val variables = Array(5) { Variable.create() }
-        val knf = Cnf(variables.toMutableSet())
-        knf += variables[0] - variables[1]
-        knf += variables[2] + variables[3] + variables[4]
-        val solution = solve(SolverState(knf, Binding()))
-        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+    fun `Solving with multiple literals works`() {
+        val literals = Array(5) { Literal.Positive(Variable.create()) }
+        val clause = listOf(literals[0] / literals[1]) +
+                (literals[2] / !literals[4]) +
+                (literals[1] / !literals[2]) +
+                (!literals[0] / literals[3]) +
+                CnfTerm(!literals[3])
+        val binding = Binding()
+        val solution = solve(clause, binding)
+        assertEquals(EvaluationResult.TRUE, clause.evaluate(solution))
+        assertEquals(false, solution[literals[0]])
+        assertEquals(true, solution[literals[1]])
+        assertEquals(false, solution[literals[3]])
+        assertEquals(false, solution[literals[4]])
     }
 
     @Test
     fun `Solving a equation that enforces backtracking`() {
-        val variables = Array(5) { Variable.create() }
-        val knf = Cnf(variables.toMutableSet())
-        knf += variables[0] - variables[1]
-        knf += variables[2]
-        knf += variables[0] - variables[3]
-        knf += variables[0] - variables[4]
-        knf += variables[3] + variables[4]
-        val solution = solve(SolverState(knf, Binding()))
-        assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
+        val literals = Array(5) { Literal.Positive(Variable.create()) }
+        val clause = listOf(literals[0] / !literals[1]) +
+                CnfTerm(literals[2]) +
+                CnfTerm(!literals[1]) +
+                (literals[0] / literals[3]) +
+                (literals[0] / !literals[4]) +
+                (literals[3] / literals[4])
+        val solution = solve(clause)
+        assertEquals(EvaluationResult.TRUE, clause.evaluate(solution))
     }
 
     @Test
     fun `Solving a 20 variable equation`() {
-        val variables = Array(20) { Variable.create() }
-        val knf = Cnf(variables.toMutableSet())
-        for (i in 0..18) {
-            knf += variables[i] - variables[18]
-            knf += variables[i] - variables[19]
+        val literals = Array(20) { Literal.Positive(Variable.create()) }
+        val knf = emptyList<CnfTerm>().toMutableList()
+        for (i in 0..17) {
+            knf += literals[i] / !literals[18]
+            knf += literals[i] / !literals[19]
         }
-        knf += variables[18] + variables[19]
-        val solution = solve(SolverState(knf, Binding()))
+        knf += literals[18] / literals[19]
+        val solution = solve(knf)
         assertEquals(EvaluationResult.TRUE, knf.evaluate(solution))
     }
 
     @Test
-    fun `Solving a Dnf works`() {
+    fun `Solving a unsolvable equation produces correct result`() {
+        val variable = Variable.create()
+        val cnf = listOf(CnfTerm(Literal.Positive(variable)), CnfTerm(Literal.Negation(variable)))
+        val solution = solve(cnf)
+        assertEquals(EvaluationResult.FALSE, cnf.evaluate(solution))
+    }
+
+    @Test
+    fun `Solving for exactly one variable works`() {
         val variables = Array(4) { Variable.create() }
-        val dnf = Dnf(variables.toMutableSet())
-        dnf += Dnf.Term() + variables[0] - variables[1] - variables[2]
-        dnf += Dnf.Term() - variables[0] + variables[1] - variables[2]
-        dnf += Dnf.Term() - variables[0] - variables[1] + variables[2]
-        val cnf = dnf.toCnf()
-        val solution = solve(SolverState(cnf, Binding()))
-        assertEquals(EvaluationResult.TRUE, dnf.evaluate(solution))
+        val clause = exactlyOneOf(variables.toList())
+        val solution = solve(clause)
+        assertEquals(EvaluationResult.TRUE, clause.evaluate(solution))
+    }
+
+    @Test
+    fun `Solving for exactly one variable with constraints works`() {
+        val variables = Array(4) { Variable.create() }
+        var clause = exactlyOneOf(listOf(variables[0], variables[1], variables[2], variables[3]))
+        clause += exactlyOneOf(listOf(variables[2], variables[3]))
+        val solution = solve(clause)
+        assertEquals(EvaluationResult.TRUE, clause.evaluate(solution))
+        assertEquals(false, solution[variables[0]])
+        assertEquals(false, solution[variables[1]])
+        assertEquals(true, solution[variables[2]])
+        assertEquals(false, solution[variables[3]])
     }
 }
