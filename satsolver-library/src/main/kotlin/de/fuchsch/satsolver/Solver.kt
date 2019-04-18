@@ -1,5 +1,6 @@
 package de.fuchsch.satsolver
 
+import arrow.core.*
 import arrow.optics.extensions.*
 import arrow.optics.optics
 import kotlinx.coroutines.channels.produce
@@ -30,6 +31,14 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
      * @property metaMapping Backwards mapping from [Literal]s to their containing [CnfTerm]s.
      */
     @optics data class SolverState(val formula: List<CnfTerm>, val metaMapping: Map<Literal, List<CnfTerm>>) {
+        /**
+         * Helper classes for working with immutable [SolverState] objects.
+         */
+        private fun mappingAt(literal: Literal) = MapAt<Literal, List<CnfTerm>>().at(literal)
+
+        operator fun plus(literal: Literal) = SolverState(
+            formula + CnfTerm(literal),
+                    mappingAt(literal).modify(metaMapping) { it.map { it + CnfTerm(literal) } })
         companion object
     }
 
@@ -75,10 +84,11 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
      * @return A [Binding] which evaluates the [Cnf] to [EvaluationResult.TRUE].
      * @throws Unsatisfiable, iff there is no binding that satisfies the cnf formula.
      */
-    internal fun solve(): Binding {
-        dpll(initialState)
-        return binding
-    }
+    internal fun solve(): Binding =
+        when (dpll(initialState)) {
+            is Either.Left<Unsatisfiable> -> throw Unsatisfiable("Formula is unsatisfiable")
+            is Either.Right<Boolean> -> binding
+        }
 
     /**
      * Unit literals are literals that appear in terms that contain only one literal.
@@ -147,18 +157,13 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
     }
 
     /**
-     * Helper classes for working with immutable [SolverState] objects.
-     */
-    private fun mappingAt(literal: Literal) = MapAt<Literal, List<CnfTerm>>().at(literal)
-
-    /**
      * Simplifies a formula by finding all unit and pure literals, binding their variables and removing terms and
      * literals from the formula.
      *
      * @param _state A solver state that can be simplified.
      * @return The simplified state.
      */
-    private fun simplify(_state: SolverState): SolverState {
+    private fun simplify(_state: SolverState): Either<Unsatisfiable, SolverState> {
         var state = _state
         var oldState = SolverState(emptyList(), emptyMap())
         // As long as unit or pure literals are found continue simplifying, because
@@ -166,12 +171,13 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
         while (oldState != state) {
             oldState = state
             val units = unitLiterals(state.formula)
+            if (units.any { literal -> units.contains(!literal)}) return Unsatisfiable("Cannot satisfy").left()
             state = assignLiterals(state, units)
             val pures = pureLiterals(state)
             state = assignLiterals(state, pures)
             logger.debug("Removed ${units.size} unit terms and ${pures.size} pure literals")
         }
-        return state
+        return state.right()
     }
 
     /**
@@ -184,24 +190,19 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
      * @_state The initial state containing the formula to solve.
      * @return True iff there is a satisfying binding for the formula, else False.
      */
-    private fun dpll(_state: SolverState): Boolean {
+    private fun dpll(_state: SolverState): Either<Unsatisfiable, Boolean> {
         logger.debug("Formula has ${_state.formula.size} terms and ${_state.metaMapping.size} unbound variables")
-        val state = simplify(_state)
-        logger.debug("Simplified formula: ${state.formula}")
-        // Check if formula is satisfied
-        if (state.formula.isEmpty()) return true
-        // Check if formula is unsatisfiable
-        if (state.formula.any { it.size == 0 }) return false
+        return simplify(_state).map { state ->
+            logger.debug("Simplified formula: ${state.formula}")
+            // Check if formula is satisfied
+            if (state.formula.isEmpty()) return true.right()
+            // Check if formula is unsatisfiable
+            if (state.formula.any { it.size == 0 }) return Unsatisfiable("Unsatisfiable").left()
 
-        // Assign next unbound literal by adding a unit clause
-        val nextLiteral = state.metaMapping.keys.first { !state.metaMapping[it].isNullOrEmpty() }
-        listOf(nextLiteral, !nextLiteral).forEach { literal ->
-            val term = CnfTerm(literal)
-            logger.debug("Trying $literal")
-            val nextState = SolverState(state.formula + term, mappingAt(literal).modify(state.metaMapping) { it.map {it + term }})
-            if (dpll(nextState)) return true
+            // Assign next unbound literal by adding a unit clause
+            val nextLiteral = state.metaMapping.keys.first { !state.metaMapping[it].isNullOrEmpty() }
+            return dpll(state + nextLiteral).handleErrorWith { dpll(state + !nextLiteral) }
         }
-        return false
     }
 
     companion object {
