@@ -16,6 +16,11 @@ import org.slf4j.LoggerFactory
  */
 class Unsatisfiable(what: String): Error(what)
 
+fun <K, V> MutableMap<K, List<V>>.merge(other: Map<K, List<V>>): MutableMap<K, List<V>> {
+    this.run { other.map { merge(it.key, it.value, { a, b -> a + b }) }}
+    return this
+}
+
 /**
  * Class used for finding satisfying [Binding]s for [Cnf]s.
  *
@@ -53,28 +58,18 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
 
     private fun reverseMapping(formula: List<CnfTerm>): Map<Literal, List<CnfTerm>> =
         runBlocking(scope) {
-            val meta = mutableMapOf<Literal, List<CnfTerm>>()
-            if (formula.isEmpty()) {
-                meta
-            } else {
-                val producers =
-                    formula.chunked(maxOf(formula.size / 4, 4)).map {
-                        produce {
-                            val meta = mutableMapOf<Literal, List<CnfTerm>>()
-                            it.forEach { term ->
-                                term.literals.forEach { literal ->
-                                    meta[literal] = meta.getOrDefault(literal, emptyList()) + term
-                                }
-                            }
-                            send(meta)
+            formula.chunked(maxOf(formula.size / 4, 4)).map {
+                produce {
+                    val meta = mutableMapOf<Literal, List<CnfTerm>>()
+                    it.forEach { term ->
+                        term.literals.forEach { literal ->
+                            meta[literal] = meta.getOrDefault(literal, emptyList()) + term
                         }
                     }
-                for (producer in producers) {
-                    producer.receive().map { (key, value) ->
-                        meta[key] = meta.getOrDefault(key, emptyList()) + value
-                    }
+                    send(meta)
                 }
-                meta
+            }.fold(mutableMapOf<Literal, List<CnfTerm>>()) { acc, producer ->
+                acc.merge(producer.receive())
             }
         }
 
@@ -127,31 +122,14 @@ class Solver(formula: List<CnfTerm>, private val binding: Binding) {
             }
         }
 
-        if (_state.formula.isEmpty()) {
-            return SolverState(emptyList(), emptyMap())
-        }
-
         val terms = literals.flatMap { _state.metaMapping.getOrDefault(it, emptyList()) }
         val negatedLiterals = literals.map { !it }
         val formula = runBlocking(scope) {
-            val formula = mutableListOf<CnfTerm>()
-            val producers =
-                _state.formula.chunked(maxOf(_state.formula.size / 4, 4)).map {
-                    produce {
-                        val f = mutableListOf<CnfTerm>()
-                        it.forEach { term ->
-                            if (!(term in terms)) {
-                                f.add(CnfTerm.literals.modify(term) { it - negatedLiterals })
-
-                            }
-                        }
-                        send(f)
-                    }
+            _state.formula.chunked(maxOf(_state.formula.size / 4, 4)).map {
+                produce {
+                    send(it.filter { it !in terms }.map { term -> CnfTerm.literals.modify(term) { it - negatedLiterals }})
                 }
-            for (producer in producers) {
-                formula.addAll(producer.receive())
-            }
-            formula
+            }.fold(emptyList<CnfTerm>()) { acc, producer -> acc + producer.receive()}
         }
         return SolverState(formula, reverseMapping(formula))
     }
