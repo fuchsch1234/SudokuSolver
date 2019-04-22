@@ -1,6 +1,7 @@
 package de.fuchsch.satsolver
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
 class SolverUnitTest {
@@ -60,8 +61,7 @@ class SolverUnitTest {
     fun `Solving a unsolvable equation produces correct result`() {
         val variable = Variable.create()
         val cnf = listOf(CnfTerm(Literal.Positive(variable)), CnfTerm(Literal.Negation(variable)))
-        val solution = solve(cnf)
-        assertEquals(EvaluationResult.FALSE, cnf.evaluate(solution))
+        assertThrows(Unsatisfiable::class.java) { solve(cnf) }
     }
 
     @Test
