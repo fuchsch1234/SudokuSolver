@@ -1,17 +1,34 @@
 package de.fuchsch.sudokusolver
 
 import de.fuchsch.satsolver.*
+import java.lang.IllegalArgumentException
 import java.security.InvalidParameterException
 import kotlin.math.sqrt
 
 enum class SudokuSize(val size: Int) {
     SUDOKU4x4(4),
-    SUDOKU9x9(9)
+    SUDOKU9x9(9);
+
+    companion object {
+        fun from(size: Int): SudokuSize = when(size) {
+            4 -> SUDOKU4x4
+            9 -> SUDOKU9x9
+            else -> throw IllegalArgumentException("No enum constant for size $size")
+        }
+    }
 }
 
 class Sudoku(private val size: SudokuSize = SudokuSize.SUDOKU9x9) {
 
-    private val grid: Array<IntArray> = Array(size.size) { IntArray(size.size) }
+    val grid = Array(size.size) { IntArray(size.size) }
+
+    constructor(_grid: Array<IntArray>): this(SudokuSize.from(_grid.size)) {
+        _grid.forEachIndexed{ rowIdx, row ->
+            row.forEachIndexed { columnIdx, value ->
+                grid[rowIdx][columnIdx] = value
+            }
+        }
+    }
 
     fun solve() {
         val variables = Array(size.size) { Array(size.size) { Array(size.size) { Variable.create() }}}
