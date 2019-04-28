@@ -11,8 +11,8 @@ import javafx.scene.paint.Color
 import javafx.util.StringConverter
 import tornadofx.*
 
-class Model {
-    private val grid = SimpleObjectProperty(Array(9) { IntArray(9) })
+class Model(size: Int) {
+    private val grid = SimpleObjectProperty(Array(size) { IntArray(size) })
     private var sudoku: Sudoku? = null
 
     fun cellProperty(row: Int, column: Int) = SimpleStringProperty(this, this.grid.value[row][column].toString()).apply {
@@ -42,36 +42,56 @@ class Model {
     }
 }
 
-class MyViewModel: ItemViewModel<Model>() {
-    private var task: Task<Unit?>? = null
+open class SudokuViewModel: ItemViewModel<Model>() {
 
-    fun cellProperty(row: Int, column: Int) = bind { item?.cellProperty(row, column) }
+    private var task = SimpleObjectProperty<Task<Unit?>?>(null)
+
+    val sizes = FXCollections.observableArrayList(*SudokuSize.values())
+    val selectedSize = SimpleObjectProperty<SudokuSize>(SudokuSize.SUDOKU9x9)
+
+    private val model9x9 = Model(9)
+    private val model4x4 = Model(4)
+
+    init {
+        item = model9x9
+        selectedSize.onChange { size -> size?.let { item = when(it) {
+            SudokuSize.SUDOKU4x4 -> model4x4
+            SudokuSize.SUDOKU9x9 -> model9x9
+        }} }
+    }
+
+    val cancelable = Bindings.createBooleanBinding({ task.get() != null }, arrayOf(task))
+
+    fun cellProperty(size: Int, row: Int, column: Int) = bind { when(size) {
+            4 -> model4x4.cellProperty(row, column)
+            9 -> model9x9.cellProperty(row, column)
+            else -> throw IllegalArgumentException()
+    } }
 
     fun solve() {
-        task = runAsync { item?.solve() } ui { item?.update() }
+        task.set(runAsync { item?.solve() } ui { item?.update(); task.set(null) })
     }
 
     fun abort() {
-        task?.cancel()
+        task.get()?.cancel()
+        task.set(null)
     }
+
 }
 
-class HelloWorld: View("Sudoku") {
-    private val model: MyViewModel by inject()
-
-    init {
-        model.item = Model()
-    }
+class SudokuView(size: Int): Fragment() {
+    private val model: SudokuViewModel by inject()
 
     override val root = vbox {
         gridpane {
             style {
                 padding = box(10.px)
+                alignment = Pos.CENTER
             }
-            repeat(9) { row ->
+            repeat(size) { row ->
                 row {
-                    repeat(9) { column ->
-                        textfield(model.cellProperty(row, column)) {
+                    repeat(size) { column ->
+                        textfield(model.cellProperty(size, row, column)) {
                             style {
                                 border = Border(BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths(0.5)))
                                 maxWidth = 30.px
@@ -80,8 +100,8 @@ class HelloWorld: View("Sudoku") {
                             validator {
                                 when {
                                     it == null -> null
-                                    Regex("[0-9]?") matches it -> null
-                                    else -> error("Must be between 0 and 9")
+                                    Regex("[0-$size]?") matches it -> null
+                                    else -> error("Must be between 0 and $size")
                                 }
                             }
                         }
@@ -90,8 +110,10 @@ class HelloWorld: View("Sudoku") {
             }
         }
         hbox {
-            alignment = Pos.CENTER
-            padding = Insets(10.0, 10.0, 10.0, 10.0)
+            style {
+                alignment = Pos.CENTER
+                padding = box(10.px)
+            }
             button("Solve") {
                 enableWhen(model.valid.toBinding())
                 action {
@@ -100,6 +122,7 @@ class HelloWorld: View("Sudoku") {
                 }
             }
             button("Cancel") {
+                enableWhen(model.cancelable)
                 action {
                     model.abort()
                 }
