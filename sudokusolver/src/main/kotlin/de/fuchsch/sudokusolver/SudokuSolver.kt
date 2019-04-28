@@ -3,8 +3,8 @@ package de.fuchsch.sudokusolver
 import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
+import javafx.collections.FXCollections
 import javafx.concurrent.Task
-import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
@@ -108,4 +108,31 @@ class HelloWorld: View("Sudoku") {
     }
 }
 
-class SudokuSolver: App(HelloWorld::class)
+class SudokuSolver: View("Sudoku") {
+    private val model: SudokuViewModel by inject()
+
+    private val sudoku9x9 = SudokuView(9)
+    private val sudoku4x4 = SudokuView(4)
+
+    init {
+        model.selectedSize.onChange { size ->
+            size?.let {
+                when(it) {
+                    SudokuSize.SUDOKU9x9 -> sudoku4x4.replaceWith(sudoku9x9, sizeToScene = true)
+                    SudokuSize.SUDOKU4x4 -> sudoku9x9.replaceWith(sudoku4x4, sizeToScene = true)
+                }
+            }
+        }
+    }
+
+    override val root = vbox {
+        style {
+            padding = box(10.px)
+            alignment = Pos.CENTER
+        }
+        combobox(model.selectedSize, model.sizes)
+        add(sudoku9x9)
+    }
+}
+
+class SudokuApp: App(SudokuSolver::class)
