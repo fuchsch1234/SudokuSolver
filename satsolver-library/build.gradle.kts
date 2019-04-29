@@ -12,13 +12,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.0")
 
     implementation("org.slf4j:slf4j-api:1.7.25")
-    implementation("org.slf4j:slf4j-log4j12:1.7.26")
 
     implementation("io.arrow-kt:arrow-core-data:$arrow_version")
     implementation("io.arrow-kt:arrow-optics:$arrow_version")
     kapt("io.arrow-kt:arrow-optics:$arrow_version")
     kapt("io.arrow-kt:arrow-meta:$arrow_version")
 
+    testImplementation("org.slf4j:slf4j-log4j12:1.7.26")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.1.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.1.0")
 }
