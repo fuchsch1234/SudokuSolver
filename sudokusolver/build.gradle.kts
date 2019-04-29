@@ -3,6 +3,8 @@ plugins {
     kotlin("jvm")
 }
 
+version = "1.0.0"
+
 application {
     mainClassName = "$group.sudokusolver.SudokuApp"
 }
