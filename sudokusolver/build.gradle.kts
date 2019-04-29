@@ -10,6 +10,7 @@ application {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(project(":satsolver-library"))
+    implementation("org.slf4j:slf4j-log4j12:1.7.26")
 
     implementation("no.tornado:tornadofx:1.7.17")
 
