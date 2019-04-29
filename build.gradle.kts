@@ -7,7 +7,6 @@ plugins {
 
 allprojects {
     group = "de.fuchsch"
-    version = "0.1.0-SNAPSHOT"
 
     repositories {
         jcenter()
