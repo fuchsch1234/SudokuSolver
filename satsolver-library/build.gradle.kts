@@ -5,6 +5,8 @@ plugins {
     idea
 }
 
+version = "0.2.0"
+
 dependencies {
     val arrow_version = "0.9.0"
 
